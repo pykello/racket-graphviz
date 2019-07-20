@@ -71,5 +71,6 @@
   (define p2 (dot->pict d))
   (hc-append 10 p1 p2))
 
-(map side-by-side sample_graphs)
+(side-by-side (first sample_graphs))
+;;(map side-by-side sample_graphs)
 

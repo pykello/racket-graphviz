@@ -41,10 +41,18 @@
       ;; save dc state
       (define smoothing (send dc get-smoothing))
       (define transformation (send dc get-transformation))
+      (define pen (send dc get-pen))
 
       ;; defaults
       (send dc set-smoothing `smoothed)
       (send dc set-initial-matrix (vector scale 0.0 0.0 scale dx dy))
+      (send dc set-pen (new pen%
+                            [color "black"]
+                            [style `solid]
+                            [width 1.25]
+                            [cap `butt]
+                            [join `round]
+                            [stipple #f]))
 
       ;; actual drawing
       (xdot-object-draw dc jsexpr)
@@ -52,6 +60,7 @@
       ;; restore dc state
       (send dc set-transformation transformation)
       (send dc set-smoothing smoothing)
+      (send dc set-pen pen)
       ))
   (dc draw width height))
 
@@ -93,9 +102,12 @@
   (match instruction
 
     ;; set color
-    [(hash-table (`op "c") (`color colorstr) (`grad grad))
-     (define color (string->color colorstr))
-     (send dc set-pen color 1.25 `solid)
+    [(hash-table (`op "c") (`color color) (`grad grad))
+     (define old-pen
+       (send dc get-pen))
+     (define new-pen
+       (update-pen old-pen `color (string->color color)))
+     (send dc set-pen new-pen)
      (send dc set-text-foreground color)]
 
     ;; set fill
@@ -196,7 +208,15 @@
 
     ;; set style
     [(hash-table (`op "S") (`style style))
-     0]
+     (define cmd (string-split style #rx"\\(|\\)"))
+     (match cmd
+       [(list "setlinewidth" width)
+        (define old-pen
+          (send dc get-pen))
+        (define new-pen
+          (update-pen old-pen `width (string->number width)))
+        (send dc set-pen new-pen)]
+       [else 0])]
     ))
 
 
@@ -220,3 +240,24 @@
 
 (define (string->numlist s sep)
   (map string->number (string-split s sep)))
+
+(define (update-pen pen attr value)
+  (define color
+    (if (eq? attr `color)
+        value
+        (send pen get-color)))
+  (define width
+    (if (eq? attr `width)
+        value
+        (send pen get-width)))
+  (define style
+    (if (eq? attr `style)
+        value
+        (send pen get-style)))
+  (new pen%
+       [color color]
+       [width width]
+       [style style]
+       [cap (send pen get-cap)]
+       [join (send pen get-join)]
+       [stipple (send pen get-stipple)]))
