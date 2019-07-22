@@ -209,14 +209,21 @@
     ;; set style
     [(hash-table (`op "S") (`style style))
      (define cmd (string-split style #rx"\\(|\\)"))
-     (match cmd
-       [(list "setlinewidth" width)
-        (define old-pen
-          (send dc get-pen))
-        (define new-pen
-          (update-pen old-pen `width (string->number width)))
-        (send dc set-pen new-pen)]
-       [else 0])]
+     (define old-pen (send dc get-pen))
+     (define new-pen
+       (match cmd
+         [(list "setlinewidth" width)
+          (update-pen old-pen `width (string->number width))]
+         [(list "solid")
+          (update-pen old-pen `style `solid)]
+         [(list "dashed")
+          (update-pen old-pen `style `long-dash)]
+         [(list "dotted")
+          (update-pen old-pen `style `dot)]
+         [(list "invis")
+          (update-pen old-pen `style `transparent)]
+         [else old-pen]))
+     (send dc set-pen new-pen)]
     ))
 
 
