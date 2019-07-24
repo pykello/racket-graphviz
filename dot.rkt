@@ -9,10 +9,10 @@
 ;;
 ;; converts the given dot definition to a pict
 ;;
-(define (dot->pict str)
+(define (dot->pict str #:node-picts [node-picts (make-hash)])
   (define dot-output (run-dot str "json"))
   (define xdot-json (read-json dot-output))
-  (xdot-json->pict xdot-json))
+  (xdot-json->pict xdot-json node-picts))
 
 ;;
 ;; runs "dot" and returns the stdout port
@@ -30,7 +30,7 @@
 ;;
 ;; converts output of dot in json format to a pict
 ;;
-(define (xdot-json->pict jsexpr)
+(define (xdot-json->pict jsexpr node-picts)
   (define bounding-box
     (string->numlist (hash-ref jsexpr 'bb) ","))
   (define scale 1.25)
@@ -55,7 +55,7 @@
                             [stipple #f]))
 
       ;; actual drawing
-      (xdot-object-draw dc jsexpr)
+      (xdot-object-draw dc jsexpr node-picts)
 
       ;; restore dc state
       (send dc set-transformation transformation)
@@ -68,24 +68,34 @@
 ;;
 ;; drwas a given "dot" object (in json format) on the given dc
 ;;
-(define (xdot-object-draw dc jsexpr)
+(define (xdot-object-draw dc jsexpr node-picts)
   ;; save state
   (define brush (send dc get-brush))
   (define pen (send dc get-pen))
   (define font (send dc get-font))
   (define text-foreground (send dc get-text-foreground))
-  
-  ;; apply drawing instructions
-  (for* ([draw-label `(_draw_ _ldraw_ _hdraw_ _tdraw_)]
-         [instruction (hash-ref jsexpr draw-label `())])
-    (apply-instruction dc instruction))
+
+  (define name (hash-ref jsexpr `name "XYZ"))
+  (define node-pict (hash-ref node-picts name #f))
+
+  (if (pict? node-pict)
+      (let* ([pos (hash-ref jsexpr `pos "0,0")]
+             [pos-list (string->numlist pos ",")]
+             [pos-x (- (first pos-list) (/ (pict-width node-pict) 2))]
+             [pos-y (- (second pos-list) (/ (pict-height node-pict) 2))])
+        (draw-pict node-pict dc pos-x pos-y))
+      ;; else apply drawing instructions
+      (for* ([draw-label `(_draw_ _ldraw_ _hdraw_ _tdraw_)]
+             [instruction (hash-ref jsexpr draw-label `())])
+        (apply-instruction dc instruction)))
+
   ;; recursively draw objects
   (for* ([object (hash-ref jsexpr `objects `())])
-    (xdot-object-draw dc object))
+    (xdot-object-draw dc object node-picts))
   ;; recursively draw edges
   (for* ([edge (hash-ref jsexpr `edges `())])
     (if (hash? edge)
-        (xdot-object-draw dc edge)
+        (xdot-object-draw dc edge node-picts)
         `()))
 
   ;; restore state

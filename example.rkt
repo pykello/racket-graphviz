@@ -13,11 +13,19 @@
            (map make-edge edges)))
 
 (define (make-vertex s)
-  (cond [(string? s) (vertex s s "ellipse")]
+  (cond [(string? s) (vertex s s "record")]
+        [(list? s) (list->vertex s)]
         [(vertex? s) s]))
 
 (define (make-edge s)
   (string-split s #rx"[ ]*->[ ]*"))
+
+(define (list->vertex lst)
+  (define (aux lst name label shape)
+    (cond [(empty? lst)              (vertex name label shape)]
+          [(eq? (first lst) `#:shape)  (aux (cddr lst) name label (second lst))]
+          [(eq? (first lst) `#:label)  (aux (cddr lst) name (second lst) shape)]))
+  (aux (cdr lst) (first lst) (first lst) "record"))
 
 (define (digraph->dot d)
   (define vertex-defs
@@ -49,8 +57,11 @@
 (define (vertex->dot v)
   (match v
     [(vertex name label shape)
+     (define shape-str (if (pict? shape)
+                           "record"
+                           shape))
      (define properties `(("label" ,label)
-                          ("shape" ,shape)))
+                          ("shape" ,shape-str)))
      (string-append name (properties->string properties))]))
 
 (define (edge->dot e)
@@ -137,11 +148,19 @@
 (side-by-side (first sample_graphs))
 ;;(map side-by-side sample_graphs)
 
-(define d1 (make-digraph `("a" "b" "c" "d")
+(define d1 (make-digraph `(["a" #:shape "diamond"]
+                           ["b" #:shape ,(cloud 70 20) #:label "stdout"]
+                           "c" "d")
                          `("a -> b -> c"
                            "a -> d -> c")))
 
 (define d1-dot (digraph->dot d1))
 (display d1-dot)
 (newline)
-(dot->pict d1-dot)
+
+(define a-shape (cc-superimpose (cloud 80 40) (text "Hello!")))
+
+(define d1-node-picts
+  (make-hash `(["a" . ,a-shape])))
+
+(dot->pict d1-dot #:node-picts d1-node-picts)
