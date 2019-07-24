@@ -4,6 +4,69 @@
 (require pict)
 (require "dot.rkt")
 
+(struct digraph (vertices edges))
+(struct vertex (name label shape))
+(struct edge (nodes))
+
+(define (make-digraph vertices edges)
+  (digraph (map make-vertex vertices)
+           (map make-edge edges)))
+
+(define (make-vertex s)
+  (cond [(string? s) (vertex s s "ellipse")]
+        [(vertex? s) s]))
+
+(define (make-edge s)
+  (string-split s #rx"[ ]*->[ ]*"))
+
+(define (digraph->dot d)
+  (define vertex-defs
+    (string-append (vertices->dot (digraph-vertices d))
+                   "\n"
+                   (edges->dot (digraph-edges d))))
+  (string-append "digraph {\n"
+                 (indent 4 vertex-defs)
+                 "\n}"))
+
+(define (indent n s)
+  (define lines (string-split s "\n"))
+  (define line-prefix (repeat n " "))
+  (define indented-lines
+    (map (curry string-append line-prefix) lines))
+  (string-join indented-lines "\n"))
+
+(define (repeat n s)
+  (apply string-append
+         (for/list ([x (in-range n)])
+           s)))
+
+(define (vertices->dot vs)
+  (string-join (map vertex->dot vs) "\n"))
+
+(define (edges->dot es)
+  (string-join (map edge->dot es) "\n"))
+
+(define (vertex->dot v)
+  (match v
+    [(vertex name label shape)
+     (define properties `(("label" ,label)
+                          ("shape" ,shape)))
+     (string-append name (properties->string properties))]))
+
+(define (edge->dot e)
+  (string-join e " -> "))
+
+(define (properties->string ps)
+  (string-join (map property->string ps) " "
+               #:before-first "["
+               #:after-last   "]"))
+
+(define (property->string p)
+  (string-append (first p)
+                 "=\""
+                 (string-replace (second p) "\"" "\\\"")
+                 "\""))
+
 (define sample_graphs
   (list
    "digraph D {
@@ -64,7 +127,7 @@
       start [shape=Mdiamond];
       end [shape=Msquare];
    }"
-))
+   ))
 
 (define (side-by-side d)
   (define p1 (svg-port->pict (run-dot d "svg")))
@@ -74,3 +137,11 @@
 (side-by-side (first sample_graphs))
 ;;(map side-by-side sample_graphs)
 
+(define d1 (make-digraph `("a" "b" "c" "d")
+                         `("a -> b -> c"
+                           "a -> d -> c")))
+
+(define d1-dot (digraph->dot d1))
+(display d1-dot)
+(newline)
+(dot->pict d1-dot)

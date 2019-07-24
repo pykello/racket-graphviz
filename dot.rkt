@@ -34,8 +34,8 @@
   (define bounding-box
     (string->numlist (hash-ref jsexpr 'bb) ","))
   (define scale 1.25)
-  (define width (* scale (third bounding-box)))
-  (define height (* scale (second bounding-box)))
+  (define width (+ 2 (* scale (third bounding-box))))
+  (define height (+ 2 (* scale (second bounding-box))))
   (define draw
     (λ (dc dx dy)
       ;; save dc state
@@ -45,7 +45,7 @@
 
       ;; defaults
       (send dc set-smoothing `smoothed)
-      (send dc set-initial-matrix (vector scale 0.0 0.0 scale dx dy))
+      (send dc set-initial-matrix (vector scale 0.0 0.0 scale (+ 1 dx) (+ 1 dy)))
       (send dc set-pen (new pen%
                             [color "black"]
                             [style `solid]
