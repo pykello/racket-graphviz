@@ -10,7 +10,7 @@
    "digraph D {
      A [shape=diamond]
      B [shape=box]
-     C [shape=circle]
+     C [shape=circle, width=1]
      A -> B [style=dashed, color=grey]
      A -> C [color=\"black:invis:black\"]
      A -> D [penwidth=5, arrowhead=none]
@@ -76,18 +76,9 @@
 ;;(map side-by-side sample_graphs)
 
 (define d1 (make-digraph `(["a" #:shape "diamond"]
-                           ["b" #:shape ,(cloud 70 20) #:label "stdout"]
+                           ["b" #:shape ,(cloud 60 30) #:label "c"]
                            "c" "d")
                          `("a -> b -> c"
                            "a -> d -> c")))
 
-(define d1-dot (digraph->dot d1))
-(display d1-dot)
-(newline)
-
-(define a-shape (cc-superimpose (cloud 80 40) (text "Hello!")))
-
-(define d1-node-picts
-  (make-hash `(["a" . ,a-shape])))
-
-(dot->pict d1-dot #:node-picts d1-node-picts)
+(digraph->pict d1)

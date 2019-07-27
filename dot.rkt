@@ -78,16 +78,24 @@
   (define name (hash-ref jsexpr `name "XYZ"))
   (define node-pict (hash-ref node-picts name #f))
 
-  (if (pict? node-pict)
-      (let* ([pos (hash-ref jsexpr `pos "0,0")]
-             [pos-list (string->numlist pos ",")]
-             [pos-x (- (first pos-list) (/ (pict-width node-pict) 2))]
-             [pos-y (- (second pos-list) (/ (pict-height node-pict) 2))])
-        (draw-pict node-pict dc pos-x pos-y))
-      ;; else apply drawing instructions
-      (for* ([draw-label `(_draw_ _ldraw_ _hdraw_ _tdraw_)]
-             [instruction (hash-ref jsexpr draw-label `())])
-        (apply-instruction dc instruction)))
+  (cond
+    [(pict? node-pict)
+     (let* ([pos (hash-ref jsexpr `pos "0,0")]
+            [pos-list (string->numlist pos ",")]
+            [pos-x (- (first pos-list) (/ (pict-width node-pict) 2))]
+            [pos-y (- (second pos-list) (/ (pict-height node-pict) 2))])
+       (draw-pict node-pict dc pos-x pos-y))]
+    [else #f])
+
+  ;; if a shape is associated with node, just draw the label
+  (define draw-keys
+    (cond [(pict? node-pict) `(_ldraw_)]
+          [else `(_draw_ _ldraw_ _hdraw_ _tdraw_)]))
+
+  ;; apply drawing instructions
+  (for* ([key draw-keys]
+         [instruction (hash-ref jsexpr key `())])
+    (apply-instruction dc instruction))
 
   ;; recursively draw objects
   (for* ([object (hash-ref jsexpr `objects `())])

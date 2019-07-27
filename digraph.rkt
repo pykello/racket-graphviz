@@ -9,7 +9,9 @@
          make-digraph
          make-vertex
          make-edge
-         digraph->dot)
+         digraph->dot
+         digraph->pict
+         digraph-node-picts)
 
 (struct digraph (vertices edges))
 (struct vertex (name label shape))
@@ -26,6 +28,16 @@
 
 (define (make-edge s)
   (string-split s #rx"[ ]*->[ ]*"))
+
+(define (digraph-node-picts d)
+  (make-hash
+   (for/list ([v (digraph-vertices d)]
+              #:when (pict? (vertex-shape v)))
+     (cons (vertex-name v) (vertex-shape v)))))
+
+(define (digraph->pict d)
+  (dot->pict (digraph->dot d)
+             #:node-picts (digraph-node-picts d)))
 
 (define (list->vertex lst)
   (define (aux lst name label shape)
@@ -67,8 +79,16 @@
      (define shape-str (if (pict? shape)
                            "record"
                            shape))
-     (define properties `(("label" ,label)
+     (define basic-properties `(("label" ,label)
                           ("shape" ,shape-str)))
+     (define size-properties
+       (cond
+         [(pict? shape) `(("fixedsize" "true")
+                          ("height" ,(number->string (/ (pict-height shape) 72.)))
+                          ("width" ,(number->string (/ (pict-width shape) 72.))))]
+         [else `()]))
+
+     (define properties (append basic-properties size-properties))
      (string-append name (properties->string properties))]))
 
 (define (edge->dot e)
