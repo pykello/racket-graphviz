@@ -81,4 +81,12 @@
                          `("a -> b -> c"
                            "a -> d -> c")))
 
-(digraph->pict d1)
+(define d1-pict (digraph->pict d1))
+
+
+(vc-append 20
+           (rotate (scale d1-pict 2.0) (/ pi 2.0))
+           (hc-append 10
+                      d1-pict
+                      (scale d1-pict 1.25)
+                      (scale d1-pict 1.5)))

@@ -33,7 +33,7 @@
 (define (xdot-json->pict jsexpr node-picts)
   (define bounding-box
     (string->numlist (hash-ref jsexpr 'bb) ","))
-  (define scale 1.25)
+  (define scale 1)
   (define width (+ 2 (* scale (third bounding-box))))
   (define height (+ 2 (* scale (second bounding-box))))
   (define draw
@@ -43,9 +43,15 @@
       (define transformation (send dc get-transformation))
       (define pen (send dc get-pen))
 
+      (define-values
+        (xx xy yx yy x0 y0)
+        (vector->values (send dc get-initial-matrix)))
+
       ;; defaults
       (send dc set-smoothing `smoothed)
-      (send dc set-initial-matrix (vector scale 0.0 0.0 scale (+ 1 dx) (+ 1 dy)))
+      (send dc set-initial-matrix (vector xx xy yx yy
+                                          (+ 1 x0 (* dx xx) (* dy xy))
+                                          (+ 1 y0 (* dx yx) (* dy yy))))
       (send dc set-pen (new pen%
                             [color "black"]
                             [style `solid]
