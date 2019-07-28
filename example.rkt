@@ -77,8 +77,8 @@
 
 (define d1 (make-digraph `(["a" #:shape "diamond"]
                            ["b" #:shape ,(cloud 60 30) #:label "c"]
-                           "c" "d")
-                         `("a -> b -> c"
+                           "c" "d"
+                           "a -> b -> c"
                            "a -> d -> c")))
 
 (define d1-pict (digraph->pict d1))

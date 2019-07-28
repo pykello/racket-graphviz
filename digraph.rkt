@@ -13,13 +13,16 @@
          digraph->pict
          digraph-node-picts)
 
-(struct digraph (vertices edges))
+(struct digraph (objects))
 (struct vertex (name label shape))
 (struct edge (nodes))
 
-(define (make-digraph vertices edges)
-  (digraph (map make-vertex vertices)
-           (map make-edge edges)))
+(define (make-digraph defs)
+  (digraph (map make-object defs)))
+
+(define (make-object def)
+  (cond [(and (string? def) (string-contains? def "->")) (make-edge def)]
+        [else (make-vertex def)]))
 
 (define (make-vertex s)
   (cond [(string? s) (vertex s s "record")]
@@ -27,13 +30,16 @@
         [(vertex? s) s]))
 
 (define (make-edge s)
-  (string-split s #rx"[ ]*->[ ]*"))
+  (edge (string-split s #rx"[ ]*->[ ]*")))
 
 (define (digraph-node-picts d)
   (make-hash
    (for/list ([v (digraph-vertices d)]
               #:when (pict? (vertex-shape v)))
      (cons (vertex-name v) (vertex-shape v)))))
+
+(define (digraph-vertices d)
+  (filter vertex? (digraph-objects d)))
 
 (define (digraph->pict d)
   (dot->pict (digraph->dot d)
@@ -47,12 +53,9 @@
   (aux (cdr lst) (first lst) (first lst) "record"))
 
 (define (digraph->dot d)
-  (define vertex-defs
-    (string-append (vertices->dot (digraph-vertices d))
-                   "\n"
-                   (edges->dot (digraph-edges d))))
+  (define defs (objects->dot (digraph-objects d)))
   (string-append "digraph {\n"
-                 (indent 4 vertex-defs)
+                 (indent 4 defs)
                  "\n}"))
 
 (define (indent n s)
@@ -67,11 +70,12 @@
          (for/list ([x (in-range n)])
            s)))
 
-(define (vertices->dot vs)
-  (string-join (map vertex->dot vs) "\n"))
+(define (objects->dot objs)
+  (string-join (map object->dot objs) "\n"))
 
-(define (edges->dot es)
-  (string-join (map edge->dot es) "\n"))
+(define (object->dot obj)
+  (cond [(vertex? obj) (vertex->dot obj)]
+        [(edge? obj) (edge->dot obj)]))
 
 (define (vertex->dot v)
   (match v
@@ -92,7 +96,7 @@
      (string-append name (properties->string properties))]))
 
 (define (edge->dot e)
-  (string-join e " -> "))
+  (string-join (edge-nodes e) " -> "))
 
 (define (properties->string ps)
   (string-join (map property->string ps) " "
