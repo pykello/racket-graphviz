@@ -79,14 +79,9 @@
                            ["b" #:shape ,(cloud 60 30) #:label "c"]
                            "c" "d"
                            "a -> b -> c"
-                           "a -> d -> c")))
+                           "a -> d -> c"
+                           ,(make-subgraph "stdout"
+                                           `("f" "g" "f -> g"))
+                           "d -> g")))
 
-(define d1-pict (digraph->pict d1))
-
-
-(vc-append 20
-           (rotate (scale d1-pict 2.0) (/ pi 2.0))
-           (hc-append 10
-                      d1-pict
-                      (scale d1-pict 1.25)
-                      (scale d1-pict 1.5)))
+(digraph->pict d1)

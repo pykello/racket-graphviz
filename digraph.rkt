@@ -3,12 +3,14 @@
 (require "dot.rkt")
 (require pict)
 
-(provide (struct-out digraph)
-         (struct-out vertex)
-         (struct-out edge)
-         make-digraph
+(provide make-digraph
+         make-subgraph
          make-vertex
          make-edge
+         (struct-out digraph)
+         (struct-out vertex)
+         (struct-out edge)
+         (struct-out subgraph)
          digraph->dot
          digraph->pict
          digraph-node-picts)
@@ -16,12 +18,17 @@
 (struct digraph (objects))
 (struct vertex (name label shape))
 (struct edge (nodes))
+(struct subgraph (label objects))
 
 (define (make-digraph defs)
   (digraph (map make-object defs)))
 
+(define (make-subgraph name defs)
+  (subgraph name (map make-object defs)))
+
 (define (make-object def)
   (cond [(and (string? def) (string-contains? def "->")) (make-edge def)]
+        [(subgraph? def) def]
         [else (make-vertex def)]))
 
 (define (make-vertex s)
@@ -38,8 +45,18 @@
               #:when (pict? (vertex-shape v)))
      (cons (vertex-name v) (vertex-shape v)))))
 
+
 (define (digraph-vertices d)
-  (filter vertex? (digraph-objects d)))
+  (find-vertices (digraph-objects d)))
+
+(define (subgraph-vertices d)
+  (find-vertices (subgraph-objects d)))
+
+(define (find-vertices objs)
+  (define outer-vertices (filter vertex? objs))
+  (define subgraphs (filter subgraph? objs))
+  (define nested-vertices (map subgraph-vertices subgraphs))
+  (append outer-vertices (apply append nested-vertices)))
 
 (define (digraph->pict d)
   (dot->pict (digraph->dot d)
@@ -75,7 +92,19 @@
 
 (define (object->dot obj)
   (cond [(vertex? obj) (vertex->dot obj)]
-        [(edge? obj) (edge->dot obj)]))
+        [(edge? obj) (edge->dot obj)]
+        [(subgraph? obj) (subgraph->dot obj)]
+        [else ""]))
+
+
+(define (subgraph->dot d)
+  (define defs (objects->dot (subgraph-objects d)))
+  (string-append "subgraph "
+                 "cluster_" (number->string (random 1 32000000))
+                 " {\n"
+                 "label=" (quote-string (subgraph-label d)) "\n"
+                 (indent 4 defs)
+                 "\n}"))
 
 (define (vertex->dot v)
   (match v
@@ -104,7 +133,7 @@
                #:after-last   "]"))
 
 (define (property->string p)
-  (string-append (first p)
-                 "=\""
-                 (string-replace (second p) "\"" "\\\"")
-                 "\""))
+  (string-append (first p) "=" (quote-string (second p))))
+
+(define (quote-string s)
+  (string-append "\"" (string-replace s "\"" "\\\"") "\""))
