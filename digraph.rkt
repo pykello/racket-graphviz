@@ -13,7 +13,7 @@
          digraph-node-picts)
 
 (struct digraph (objects))
-(struct vertex (name label shape))
+(struct vertex (name label shape attrs))
 (struct edge (nodes))
 (struct subgraph (label objects attrs))
 
@@ -33,7 +33,7 @@
 ;; string->object functions
 
 (define (string->vertex s)
-  (vertex s s "record"))
+  (vertex s s "record" (make-immutable-hash)))
 
 (define (string->edge s)
   (edge (string-split s #rx"[ ]*->[ ]*")))
@@ -45,7 +45,9 @@
   (define name (first lst))
   (define label (hash-ref attrs `#:label name))
   (define shape (hash-ref attrs `#:shape "record"))
-  (vertex name label shape))
+  (define other-attrs
+    (hash-remove-multi attrs `(#:label #:shape))) 
+  (vertex name label shape other-attrs))
 
 (define (list->subgraph def)
   (define-values (attrs rest) (list->attrs (cdr def)))
@@ -57,7 +59,7 @@
   (define (aux lst attrs rest)
     (cond
       [(empty? lst)
-       (values (make-hash attrs) (reverse rest))]
+       (values (make-immutable-hash attrs) (reverse rest))]
 
       [(keyword? (first lst))
        (aux (cddr lst)
@@ -127,29 +129,34 @@
 
 (define (subgraph->dot d)
   (define defs (objects->dot (subgraph-objects d)))
+  (define attrs (hash->list (subgraph-attrs d)))
   (string-append "subgraph "
                  "cluster_" (number->string (random 1 32000000))
                  " {\n"
                  "label=" (quote-string (subgraph-label d)) "\n"
+                 (string-join (map property->string attrs) "\n")
+                 "\n"
                  (indent 4 defs)
                  "\n}"))
 
 (define (vertex->dot v)
   (match v
-    [(vertex name label shape)
+    [(vertex name label shape attrs)
      (define shape-str (if (pict? shape)
                            "record"
                            shape))
-     (define basic-properties `(("label" ,label)
-                                ("shape" ,shape-str)))
+     (define basic-properties `((#:label . ,label)
+                                (#:shape . ,shape-str)))
      (define size-properties
        (cond
-         [(pict? shape) `(("fixedsize" "true")
-                          ("height" ,(number->string (/ (pict-height shape) 72.)))
-                          ("width" ,(number->string (/ (pict-width shape) 72.))))]
+         [(pict? shape) `((#:fixedsize . "true")
+                          (#:height . ,(number->string (/ (pict-height shape) 72.)))
+                          (#:width . ,(number->string (/ (pict-width shape) 72.))))]
          [else `()]))
 
-     (define properties (append basic-properties size-properties))
+     (define other-properties (hash->list attrs))
+
+     (define properties (append basic-properties size-properties other-properties))
      (string-append name (properties->string properties))]))
 
 (define (edge->dot e)
@@ -161,7 +168,11 @@
                #:after-last   "]"))
 
 (define (property->string p)
-  (string-append (first p) "=" (quote-string (second p))))
+  (define label (keyword->string (car p)))
+  (string-append label "=" (quote-string (cdr p))))
 
 (define (quote-string s)
   (string-append "\"" (string-replace s "\"" "\\\"") "\""))
+
+(define (hash-remove-multi h keys)
+  (foldr (λ (v l) (hash-remove l v)) h keys))

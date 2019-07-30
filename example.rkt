@@ -75,12 +75,12 @@
 (side-by-side (first sample_graphs))
 ;;(map side-by-side sample_graphs)
 
-(define d1 (make-digraph `(["a" #:shape "diamond"]
+(define d1 (make-digraph `(["a" #:shape "diamond" #:fillcolor "lightgray" #:style "filled"]
                            ["b" #:shape ,(cloud 60 30) #:label "c"]
                            "c" "d"
                            "a -> b -> c"
                            "a -> d -> c"
-                           (subgraph "stdout"
+                           (subgraph "stdout" #:style "filled" #:fillcolor "cyan"
                                      ("f"
                                       "g"
                                       "f -> g"))
