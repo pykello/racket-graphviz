@@ -14,7 +14,7 @@
 
 (struct digraph (objects))
 (struct vertex (name label shape attrs))
-(struct edge (nodes))
+(struct edge (nodes attrs))
 (struct subgraph (label objects attrs))
 
 (define (make-digraph defs)
@@ -28,6 +28,7 @@
     [(list? def) (cond
                    [(empty? def) 0]
                    [(eq? (first def) `subgraph)  (list->subgraph def)]
+                   [(string-contains? (first def) "->") (list->edge def)]
                    [else                         (list->vertex def)])]))
 
 ;; string->object functions
@@ -36,9 +37,15 @@
   (vertex s s "record" (make-immutable-hash)))
 
 (define (string->edge s)
-  (edge (string-split s #rx"[ ]*->[ ]*")))
+  (edge (string-split s #rx"[ ]*->[ ]*") (make-immutable-hash)))
 
 ;; list->object functions
+
+(define (list->edge lst)
+  (define nodes
+    (string-split (first lst) #rx"[ ]*->[ ]*"))
+  (define-values (attrs rest) (list->attrs (cdr lst)))
+  (edge nodes attrs))
 
 (define (list->vertex lst)
   (define-values (attrs rest) (list->attrs (cdr lst)))
@@ -160,7 +167,9 @@
      (string-append name (properties->string properties))]))
 
 (define (edge->dot e)
-  (string-join (edge-nodes e) " -> "))
+  (string-append
+   (string-join (edge-nodes e) " -> ")
+   (properties->string (hash->list (edge-attrs e)))))
 
 (define (properties->string ps)
   (string-join (map property->string ps) " "
