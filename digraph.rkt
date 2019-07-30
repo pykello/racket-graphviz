@@ -28,7 +28,8 @@
     [(list? def) (cond
                    [(empty? def) 0]
                    [(eq? (first def) `subgraph)  (list->subgraph def)]
-                   [(string-contains? (first def) "->") (list->edge def)]
+                   [(list? (first def))          (list->edge def)]
+                   [(eq? (first def) `edge)      (list->edge (cdr def))]
                    [else                         (list->vertex def)])]))
 
 ;; string->object functions
@@ -42,8 +43,7 @@
 ;; list->object functions
 
 (define (list->edge lst)
-  (define nodes
-    (string-split (first lst) #rx"[ ]*->[ ]*"))
+  (define nodes (first lst))
   (define-values (attrs rest) (list->attrs (cdr lst)))
   (edge nodes attrs))
 

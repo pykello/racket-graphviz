@@ -10,9 +10,9 @@
     (["A" #:shape "diamond"]
      ["B" #:shape "box"]
      ["C" #:shape "circle" #:width "1"]
-     ["A -> B" #:style "dashed" #:color "grey"]
-     ["A -> C" #:color "black:invis:black"]
-     ["A -> D" #:penwidth "5" #:arrowhead "none"])
+     [("A" "B") #:style "dashed" #:color "grey"]
+     [("A" "C") #:color "black:invis:black"]
+     [("A" "D") #:penwidth "5" #:arrowhead "none"])
     ;; graph 2
     ([subgraph "process #1"
                #:style "filled"
