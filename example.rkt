@@ -80,8 +80,10 @@
                            "c" "d"
                            "a -> b -> c"
                            "a -> d -> c"
-                           ,(make-subgraph "stdout"
-                                           `("f" "g" "f -> g"))
+                           (subgraph "stdout"
+                                     ("f"
+                                      "g"
+                                      "f -> g"))
                            "d -> g")))
 
 (digraph->pict d1)
