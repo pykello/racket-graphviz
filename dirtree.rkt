@@ -2,8 +2,8 @@
 
 (require pict)
 (require racket/draw)
-(require "dot.rkt")
-(require "digraph.rkt")
+(require "lib/dot.rkt")
+(require "lib/digraph.rkt")
 
 (define (dirtree path)
   (make-digraph (dirtree-defs path) #:ortho #f))
@@ -34,5 +34,6 @@
   (exact-round width))
 
 (define d (dirtree "/home/hadi/sample"))
+(define p (digraph->pict d))
 
-(digraph->pict d)
+p

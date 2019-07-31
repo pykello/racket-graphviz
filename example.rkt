@@ -1,8 +1,8 @@
 #lang racket
 
 (require pict)
-(require "dot.rkt")
-(require "digraph.rkt")
+(require "lib/dot.rkt")
+(require "lib/digraph.rkt")
 
 (define examples
   `(
