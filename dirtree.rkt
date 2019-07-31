@@ -9,16 +9,18 @@
   (make-digraph (dirtree-defs path) #:ortho #f))
 
 (define (dirtree-defs path)
-  (define-values (base name must-be-dir) (split-path path))
-  (define label (path->string name))
-  (define shape-width (+ 10 (text-width label)))
-  (define color (if (directory-exists? path) "cyan" "bisque"))
-  (define shape (file-icon shape-width 60 color))
-  (define root (make-vertex (path->string name) #:shape shape))
-  (define sub-defs
-    (cond [(directory-exists? path) (subtree-defs root path)]
-          [else `()]))
-  (cons root sub-defs))
+  (let*-values
+      ([(base name must-be-dir) (split-path path)]
+       [(is-dir?)               (directory-exists? path)]
+       [(label)                 (path->string name)]
+       [(shape-width)           (+ 10 (text-width label))]
+       [(color)                 (if is-dir? "cyan" "bisque")]
+       [(shape)                 (file-icon shape-width 60 color)]
+       [(root)                  (make-vertex label #:shape shape)]
+       [(sub-defs)              (if is-dir?
+                                    (subtree-defs root path)
+                                    `())])
+    (cons root sub-defs)))
 
 (define (subtree-defs root-node root-path)
   (append*
