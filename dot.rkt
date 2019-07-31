@@ -25,8 +25,6 @@
      (newline stdin)
      (close-output-port stdin)
      (ctl 'wait)
-     (display (read-string 4096 stderr))
-     (newline)
      stdout]))
 
 ;;

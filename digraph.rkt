@@ -4,6 +4,8 @@
 (require pict)
 
 (provide make-digraph
+         make-vertex
+         make-edge
          (struct-out digraph)
          (struct-out vertex)
          (struct-out edge)
@@ -12,16 +14,30 @@
          digraph->pict
          digraph-node-picts)
 
-(struct digraph (objects))
+(struct digraph (objects ortho))
 (struct vertex (name label shape attrs))
 (struct edge (nodes attrs))
 (struct subgraph (label objects attrs))
 
-(define (make-digraph defs)
-  (digraph (map make-object defs)))
+(define (make-vertex label #:shape (shape "record"))
+  (define id (random 1 4294967087))
+  (define name (string-append "n_" (number->string id)))
+  (define attrs (make-immutable-hash))
+  (vertex name label shape attrs))
+
+(define (make-edge n1 n2)
+  (define nodes (list (vertex-name n1) (vertex-name n2)))
+  (define attrs (make-immutable-hash))
+  (edge nodes attrs))
+
+(define (make-digraph defs #:ortho [ortho #f])
+  (digraph (map make-object defs) ortho))
 
 (define (make-object def)
   (cond
+    [(or (vertex? def)
+         (edge? def)
+         (subgraph? def)) def]
     [(string? def) (cond
                      [(string-contains? def "->") (string->edge def)]
                      [else                        (string->vertex def)])]
@@ -109,7 +125,11 @@
 
 (define (digraph->dot d)
   (define defs (objects->dot (digraph-objects d)))
+  (define splines (cond
+                    [(digraph-ortho d) "ortho"]
+                    [else "true"]))
   (string-append "digraph {\n"
+                 "   splines=" splines "\n"
                  (indent 4 defs)
                  "\n}"))
 
