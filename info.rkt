@@ -1,5 +1,5 @@
 #lang info
-(define collection "racket-package")
+(define collection "racket-graphviz")
 (define deps '("base"))
 (define build-deps '("scribble-lib" "racket-doc" "rackunit-lib"))
 (define scribblings '(("scribblings/racket-package.scrbl" ())))
