@@ -1,8 +1,7 @@
 #lang racket
 
 (require pict)
-(require "lib/dot.rkt")
-(require "lib/digraph.rkt")
+(require graphviz)
 
 (define examples
   `(
