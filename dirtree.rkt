@@ -1,9 +1,9 @@
 #lang racket
 
-(require pict)
-(require racket/draw)
-(require "lib/dot.rkt")
-(require "lib/digraph.rkt")
+(require pict
+         racket/draw
+         "lib/dot.rkt"
+         "lib/digraph.rkt")
 
 (define (dirtree path)
   (make-digraph (dirtree-defs path) #:ortho #f))
