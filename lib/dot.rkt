@@ -25,7 +25,8 @@
      (newline stdin)
      (close-output-port stdin)
      (ctl 'wait)
-     stdout]))
+     (cond [(eq? (ctl 'status) 'done-error) (error (read-string 4096 stderr))]
+           [else stdout])]))
 
 ;;
 ;; converts output of dot in json format to a pict
