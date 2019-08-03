@@ -1,2 +1,5 @@
-*.rkt~
+*~
+*/compiled/*
 compiled/*
+doc/*
+

@@ -1,7 +1,7 @@
 #lang scribble/manual
-@require[@for-label[racket-package
+@require[@for-label[graphviz
                     racket/base]]
 @title{Racket GraphViz Integration}
-@author{pykello}
-@defmodule[racket-package]
+@author{@(author+email "Hadi Moshayedi" "hadi@moshayedi.net")}
+@defmodule[graphviz]
 The goal of this library is to make composition of Racket Pict and Graphviz Diagrams possible.
