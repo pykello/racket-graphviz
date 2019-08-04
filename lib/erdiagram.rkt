@@ -30,8 +30,9 @@
 
 (define (relation->edge relation)
   (match relation
-    [(list head tail h-arity t-arity)
+    [(list head tail t-arity h-arity)
      (list (list head tail)
+           '#:dir "both"
            '#:arrowhead (arity-shape h-arity)
            '#:arrowtail (arity-shape t-arity))]))
 
@@ -39,4 +40,3 @@
   (match arity
     [(quasiquote 'many) "crow"]
     [(quasiquote 'one) "none"]))
-

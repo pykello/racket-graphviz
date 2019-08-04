@@ -192,7 +192,7 @@
    (properties->string (hash->list (edge-attrs e)))))
 
 (define (properties->string ps)
-  (string-join (map property->string ps) " "
+  (string-join (map property->string ps) ","
                #:before-first "["
                #:after-last   "]"))
 
