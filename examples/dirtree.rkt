@@ -2,26 +2,26 @@
 
 (require pict
          racket/draw
+         file/convertible
          "../lib/dot.rkt"
-         "../lib/digraph.rkt"
-         "utils.rkt")
+         "../lib/digraph.rkt")
 
 (define (main)
-  (define depth (make-parameter 2))
+  (define depth (make-parameter 1))
   (define out-file (make-parameter "dirtree.svg"))
 
   (define path
     (command-line
      #:once-each
-     [("-d" "--depth") "Directory tree depth" (depth 1)]
-     [("-o" "--output") "Output SVG file name" (out-file "dirtree.svg")]
+     [("-d" "--depth") d "directory tree depth" (depth (string->number d))]
      #:args ([path-arg "."])
      path-arg))
 
   (define complete-path (simplify-path (path->complete-path path)))
-
-  (define result-pict (digraph->pict (dirtree complete-path (depth))))
-  (save-pict-as-svg result-pict (out-file)))
+  (define d (dirtree complete-path (depth)))
+  (define result-pict (digraph->pict d))
+  (write-bytes (convert result-pict 'svg-bytes))
+  (exit 0))
 
 (define (dirtree path depth)
   (make-digraph (dirtree-defs path depth) #:ortho #f))
