@@ -7,7 +7,8 @@
 
 (provide (all-from-out pict)
          (all-from-out "lib/dot.rkt")
-         (all-from-out "lib/digraph.rkt"))
+         (all-from-out "lib/digraph.rkt")
+         (all-from-out "lib/erdiagram.rkt"))
 
 (module+ test
   (require rackunit))
