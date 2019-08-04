@@ -3,7 +3,8 @@
 
 (require pict
          "lib/dot.rkt"
-         "lib/digraph.rkt")
+         "lib/digraph.rkt"
+         "lib/erdiagram.rkt")
 
 (provide (all-from-out pict)
          (all-from-out "lib/dot.rkt")
