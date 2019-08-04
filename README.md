@@ -30,7 +30,7 @@ are racket shapes. Rest of the nodes use a shape provided by graphviz.
 
 ![](images/custom-shapes.svg)
 
-As another example, take a look at [dirtree.rkt](dirtree.rkt) which dynamically generates a directory tree.
+As another example, take a look at [dirtree.rkt](examples/dirtree.rkt) which dynamically generates a directory tree.
 
 ![](images/dirtree.svg)
 
