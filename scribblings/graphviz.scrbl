@@ -54,12 +54,56 @@ Furthermore, a set of vertexes can be grouped in a subgraph, as show in @figure-
 
 @section[#:tag "api"]{API}
 
-@subsection{Converting to Pict}
+@subsection{Defining Subgraphs}
+@defproc[(make-digraph [definitions list?] [#:ortho ortho boolean?]) digraph?]{
+Creates a digraph. "definitions" is a list of vertex, edge, or subgraph
+definitions.
+}
+
+@defproc[(make-vertex [label string?] [#:shape shape (or/c pict? string?)]) vertex?]{
+}
+
+@subsection{Conversion to Pict}
 @defproc[(digraph->pict [digraph digraph?]) pict?]{
 Converts the given digraph to a @racket[pict].
 }
 
+@defproc[(dot->pict [definition string?]) pict?]{
+Converts the given digraph definition in dot language to a @racket[pict].
+For example, following code produces @figure-ref["dot->pict-example"].
+
+@codeblock{
+(dot->pict
+  "digraph {
+    a -> b -> c;
+   }")
+}
+
+@figure[
+ "dot->pict-example"
+ "@dot->pict example"
+ @dot->pict["digraph {
+   a -> b -> c;
+  }"]
+ ]
+}
+
 @subsection{Structs}
-@defproc[(digraph? [v any]) boolean?]{
-Checks if the given value is a digraph or not.
+
+@defstruct[digraph ([objects list?] [ortho boolean?]) #:omit-constructor]{
+}
+
+@defstruct[vertex ([name string?]
+                 [label string?]
+                 [shape (or/c pict? string?)]
+                 [attrs list?]) #:omit-constructor]{
+}
+
+@defstruct[edge ([nodes list?]
+                 [attrs list?]) #:omit-constructor]{
+}
+
+@defstruct[subgraph ([label string?]
+                     [objects list?]
+                     [attrs list?]) #:omit-constructor]{
 }
