@@ -3,16 +3,17 @@
 (require "dot.rkt")
 (require pict)
 
-(provide make-digraph
-         make-vertex
-         make-edge
+(provide (contract-out
+          [make-digraph (->* (list?) (#:ortho boolean?) digraph?)]
+          [make-vertex (->* (string?) (#:shape (or/c pict? string?)) vertex?)]
+          [make-edge (-> vertex? vertex? edge?)]
+          [digraph->dot (-> digraph? string?)]
+          [digraph->pict (-> digraph? pict?)]
+          [digraph-node-picts (-> digraph? hash?)])
          (struct-out digraph)
          (struct-out vertex)
          (struct-out edge)
-         (struct-out subgraph)
-         digraph->dot
-         digraph->pict
-         digraph-node-picts)
+         (struct-out subgraph))
 
 (struct digraph (objects ortho))
 (struct vertex (name label shape attrs))
@@ -198,7 +199,13 @@
 
 (define (property->string p)
   (define label (keyword->string (car p)))
-  (string-append label "=" (quote-string (cdr p))))
+  (string-append label "=" (quote-string (value->string (cdr p)))))
+
+(define (value->string v)
+  (cond
+    [(eq? v #t) "true"]
+    [(eq? v #f) "false"]
+    [else v]))
 
 (define (quote-string s)
   (string-append "\"" (string-replace s "\"" "\\\"") "\""))

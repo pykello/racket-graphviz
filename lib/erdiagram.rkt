@@ -4,7 +4,8 @@
          "dot.rkt"
          "digraph.rkt")
 
-(provide er-diagram)
+(provide (contract-out
+          [er-diagram (-> list? list? pict?)]))
 
 (define (er-diagram tables relations)
   (define vertices
@@ -14,7 +15,7 @@
   (define digraph
     (make-digraph
      (append vertices edges)
-     #:ortho "true"))
+     #:ortho #t))
   (digraph->pict digraph))
 
 (define (table->vertex table)

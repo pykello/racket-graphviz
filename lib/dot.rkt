@@ -4,7 +4,9 @@
 (require json)
 (require racket/draw)
 
-(provide run-dot dot->pict)
+(provide (contract-out
+          [run-dot (-> string? string? port?)]
+          [dot->pict (->* (string?) (#:node-picts hash?) pict?)]))
 
 ;;
 ;; converts the given dot definition to a pict
