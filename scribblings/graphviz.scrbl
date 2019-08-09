@@ -58,3 +58,8 @@ Furthermore, a set of vertexes can be grouped in a subgraph, as show in @figure-
 @defproc[(digraph->pict [digraph digraph?]) pict?]{
 Converts the given digraph to a @racket[pict].
 }
+
+@subsection{Structs}
+@defproc[(digraph? [v any]) boolean?]{
+Checks if the given value is a digraph or not.
+}
