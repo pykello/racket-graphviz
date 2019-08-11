@@ -3,7 +3,9 @@
                     racket/base
                     pict]]
 @require[graphviz
-         scriblib/figure]
+         scriblib/figure
+         "utils.rkt"]
+
 @title{Racket Graphviz Integration}
 @author{@(author+email "Hadi Moshayedi" "hadi@moshayedi.net")}
 @defmodule[graphviz]
@@ -26,7 +28,7 @@ the digraph in @figure-ref["digraph0"] consists of three vertexes and four edges
 @figure[
  "digraph0"
  "An example digraph"
- @digraph->pict[@(make-digraph
+ @digraph->pict-cached[@(make-digraph
                   `("v0" "v1" "v2" "v0 -> v0" "v0 -> v1" "v1 -> v2" "v2 -> v0"))]]
 
 There can be multiple edges between two vertexes, as shown in @figure-ref["digraph1"].
@@ -34,7 +36,7 @@ There can be multiple edges between two vertexes, as shown in @figure-ref["digra
 @figure[
  "digraph1"
  "multiple edges between two nodes"
- @digraph->pict[@(make-digraph
+ @digraph->pict-cached[@(make-digraph
                   `("v0" "v1" "v2" "v0 -> v1" "v0 -> v1" "v1 -> v2" "v2 -> v0" "v0 -> v2"))]]
 
 Furthermore, a set of vertexes can be grouped in a subgraph, as show in @figure-ref["digraph2"].
@@ -42,7 +44,7 @@ Furthermore, a set of vertexes can be grouped in a subgraph, as show in @figure-
 @figure[
  "digraph2"
  "Subgraphs"
- @digraph->pict[@(make-digraph
+ @digraph->pict-cached[@(make-digraph
                   `((subgraph "Coordinator"
                               ("Parser -> Planner -> Executor"))
                     (subgraph "Worker1"
@@ -82,7 +84,7 @@ For example, following code produces @figure-ref["dot->pict-example"].
 @figure[
  "dot->pict-example"
  "@dot->pict example"
- @dot->pict["digraph {
+ @dot->pict-cached["digraph {
    a -> b -> c;
   }"]
  ]
