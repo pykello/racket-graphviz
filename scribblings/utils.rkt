@@ -6,20 +6,21 @@
          file/convertible)
 
 (provide digraph->pict-cached
-          dot->pict-cached)
+         dot->pict-cached)
 
 (define (digraph->pict-cached d)
   (dot->pict-cached (digraph->dot d)
-             #:node-picts (digraph-node-picts d)))
+                    #:node-picts (digraph-node-picts d)))
 
 (define (dot->pict-cached s #:node-picts [node-picts (make-hash)])
   (let*
       ([hash (sha1 (open-input-string (normalize-dot s)))]
        [filename (string-append hash ".png")]
        [path (build-path (current-directory) "images" filename)])
+    (displayln (string-append "checking " (~v path)))
     (cond
       [(not (file-exists? path))
-        (save-pict (dot->pict s #:node-picts node-picts) path)]
+       (save-pict (dot->pict s #:node-picts node-picts) path)]
       [else 0])
     (define port (open-input-file path))
     (define result (read-bitmap port))
