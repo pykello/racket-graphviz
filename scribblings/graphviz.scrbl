@@ -4,7 +4,18 @@
                     pict]]
 @require[graphviz
          scriblib/figure
+         pict/shadow
          "utils.rkt"]
+
+@(define (shadowed-box w h color)
+  (inset (shadow (filled-rounded-rectangle w h 5
+                                           #:color color
+                                           #:border-color "black")
+                 15 -3 3) 10))
+@(define start-pict (shadowed-box 120 40 "LightSkyBlue"))
+@(define node-pict (shadowed-box 140 40 "Gainsboro"))
+@(define running-pict (shadowed-box 150 40 "Aquamarine"))
+@(define terminal-pict (shadowed-box 150 40 "Salmon"))
 
 @title{Racket Graphviz Integration}
 @author{@(author+email "Hadi Moshayedi" "hadi@moshayedi.net")}
@@ -74,10 +85,10 @@ Furthermore, a set of vertexes can be grouped in a subgraph, as show in @figure-
   @bold{Edge Definitions.} A edge can be defined using:
   @itemlist[
  @item{A string. Node names are separated by @tt{->}}
- @item{A list like @tt{(edge [node1 ...] #:attr1 val1 ...)}.}
+ @item{A list like @tt{('edge [node1 ...] #:attr1 val1 ...)}.}
  ]}
  @item{
-  @bold{Subgraph Definitions.} A subgraph can be defined using @tt{(subgraph label definitions)}}]
+  @bold{Subgraph Definitions.} A subgraph can be defined using @tt{('subgraph label definitions)}}]
 
 
 For example, @figure-ref["digraph0"] can be defined as the following, where
@@ -150,3 +161,67 @@ vertexes and edges are defined using strings.
                      [objects list?]
                      [attrs hash?]) #:omit-constructor]{
 }
+
+@section{Examples}
+
+@subsection{Android Activity Lifecycle}
+
+@codeblock{
+(define (shadowed-box w h color)
+  (inset (shadow (filled-rounded-rectangle w h 5
+                                           #:color color
+                                           #:border-color "black")
+                 15 -3 3) 10))
+
+(define start-pict (shadowed-box 120 40 "LightSkyBlue"))
+(define node-pict (shadowed-box 140 40 "Gainsboro"))
+(define running-pict (shadowed-box 150 40 "Aquamarine"))
+(define terminal-pict (shadowed-box 150 40 "Salmon"))
+
+(define d
+  (make-digraph
+   `(("Start" #:label "Activity Starts" #:shape ,start-pict)
+     ("onCreate" #:label "onCreate()" #:shape ,node-pict)
+     ("onStart" #:label "onStart()" #:shape ,node-pict)
+     ("onResume" #:label "onResume()" #:shape ,node-pict)
+     ("Running" #:label "Activity Running" #:shape ,running-pict)
+     ("onPause" #:label "onPause()" #:shape ,node-pict)
+     ("onStop" #:label "onStop()" #:shape ,node-pict)
+     ("onDestroy" #:label "onDestroy()" #:shape ,terminal-pict)
+     ("onRestart" #:label "onRestart()" #:shape ,node-pict)
+     ("killed" #:label "Process is Killed" #:shape ,terminal-pict)
+     (edge ("Start" "onCreate" "onStart" "onResume" "Running") #:weight "7")
+     (edge ("Running" "onPause") #:label "Another activity activates" #:weight "7")
+     (edge ("onPause" "onStop") #:label "Activity is no longer visible" #:weight "7")
+     (edge ("onStop" "onDestroy") #:weight "7")
+     (edge ("onPause" "onResume"))
+     (edge ("onStop" "onRestart") #:label "The Activity comes to foreground")
+     (edge ("onRestart" "onStart"))
+     (edge ("onStop" "killed"))
+     (edge ("killed" "onCreate"))
+     (same-rank "Running" "onRestart" "killed")) #:ortho #t))
+
+(scale (inset (digraph->pict d) 10) 0.8)
+}
+
+@digraph->pict-cached[@(make-digraph
+   `(("Start" #:label "Activity Starts" #:shape ,start-pict)
+     ("onCreate" #:label "onCreate()" #:shape ,node-pict)
+     ("onStart" #:label "onStart()" #:shape ,node-pict)
+     ("onResume" #:label "onResume()" #:shape ,node-pict)
+     ("Running" #:label "Activity Running" #:shape ,running-pict)
+     ("onPause" #:label "onPause()" #:shape ,node-pict)
+     ("onStop" #:label "onStop()" #:shape ,node-pict)
+     ("onDestroy" #:label "onDestroy()" #:shape ,terminal-pict)
+     ("onRestart" #:label "onRestart()" #:shape ,node-pict)
+     ("killed" #:label "Process is Killed" #:shape ,terminal-pict)
+     (edge ("Start" "onCreate" "onStart" "onResume" "Running") #:weight "7")
+     (edge ("Running" "onPause") #:label "Another activity activates" #:weight "7")
+     (edge ("onPause" "onStop") #:label "Activity is no longer visible" #:weight "7")
+     (edge ("onStop" "onDestroy") #:weight "7")
+     (edge ("onPause" "onResume"))
+     (edge ("onStop" "onRestart") #:label "The Activity comes to foreground")
+     (edge ("onRestart" "onStart"))
+     (edge ("onStop" "killed"))
+     (edge ("killed" "onCreate"))
+     (same-rank "Running" "onRestart" "killed")) #:ortho #t)]

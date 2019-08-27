@@ -47,6 +47,7 @@
                    [(eq? (first def) `subgraph)  (list->subgraph def)]
                    [(list? (first def))          (list->edge def)]
                    [(eq? (first def) `edge)      (list->edge (cdr def))]
+                   [(eq? (first def) `same-rank) (cdr def)]
                    [else                         (list->vertex def)])]))
 
 ;; string->object functions
@@ -153,6 +154,7 @@
   (cond [(vertex? obj) (vertex->dot obj)]
         [(edge? obj) (edge->dot obj)]
         [(subgraph? obj) (subgraph->dot obj)]
+        [(list? obj) (rank->dot obj)]
         [else ""]))
 
 (define (subgraph->dot d)
@@ -188,9 +190,17 @@
      (string-append name (properties->string properties))]))
 
 (define (edge->dot e)
+  (define attrs (edge-attrs e))
   (string-append
    (string-join (edge-nodes e) " -> ")
-   (properties->string (hash->list (edge-attrs e)))))
+   (properties->string (hash->list attrs))))
+
+(define (rank->dot e)
+  (string-append
+    "{\n"
+    "rank=same\n"
+    (string-join e "\n")
+    "}"))
 
 (define (properties->string ps)
   (string-join (map property->string ps) ","
