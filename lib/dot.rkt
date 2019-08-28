@@ -1,8 +1,12 @@
 #lang racket
 
-(require pict)
-(require json)
-(require racket/draw)
+(require pict
+         json
+         racket/draw
+         (only-in metapict
+                  bez
+                  pt
+                  bez->dc-path))
 
 (provide (contract-out
           [run-dot (-> string? string? port?)]
@@ -214,15 +218,24 @@
     [(hash-table (`op "b") (`points points))
      (define (draw-spline pts)
        (cond
-         [(>= (length pts) 3)
+         [(= (length pts) 3)
           (define p1 (first pts))
           (define p2 (second pts))
           (define p3 (third pts))
           (send dc draw-spline
                 (first p1) (second p1)
                 (first p2) (second p2)
-                (first p3) (second p3))
-          (draw-spline (cddr pts))]
+                (first p3) (second p3))]
+         [(>= (length pts) 4)
+          (define (pair->pt p)
+            (pt (first p) (second p)))
+          (define path (bez->dc-path
+                        (bez (pair->pt (first pts))
+                             (pair->pt (second pts))
+                             (pair->pt (third pts))
+                             (pair->pt (fourth pts)))))
+          (send dc draw-path path)
+          (draw-spline (cdddr pts))]
          [(= (length pts) 2)
           (define p1 (first pts))
           (define p2 (second pts))
