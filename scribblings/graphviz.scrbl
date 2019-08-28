@@ -225,3 +225,26 @@ vertexes and edges are defined using strings.
      (edge ("onStop" "killed"))
      (edge ("killed" "onCreate"))
      (same-rank "Running" "onRestart" "killed")) #:ortho #t)]
+
+@subsection{Turnstile State Machine}
+
+@codeblock{
+(make-digraph
+   `(("Locked" #:shape "circle" #:width "1.2")
+     ("Unlocked" #:shape "circle" #:width "1.2")
+     (edge ("Locked:n" "Locked:n") #:label "Push")
+     (edge ("Locked" "Unlocked") #:label "Coin")
+     (edge ("Unlocked" "Locked") #:label "Push")
+     (edge ("Unlocked:n" "Unlocked:n") #:label "Coin")
+     (same-rank "Locked" "Unlocked")))
+}
+
+@digraph->pict-cached[@(make-digraph
+   `(("Locked" #:shape "circle" #:width "1.2")
+     ("Unlocked" #:shape "circle" #:width "1.2")
+     (edge ("Locked:n" "Locked:n") #:label "Push")
+     (edge ("Locked" "Unlocked") #:label "Coin")
+     (edge ("Unlocked" "Locked") #:label "Push")
+     (edge ("Unlocked:n" "Unlocked:n") #:label "Coin")
+     (same-rank "Locked" "Unlocked")))
+]
