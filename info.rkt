@@ -5,6 +5,7 @@
                "draw-lib"
                "metapict"))
 (define build-deps '("scribble-lib"
+                     "pict-doc"
                      "racket-doc"
                      "rackunit-lib"))
 (define scribblings '(("scribblings/graphviz.scrbl" ())))
