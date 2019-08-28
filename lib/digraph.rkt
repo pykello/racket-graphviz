@@ -199,7 +199,9 @@
   (string-append
     "{\n"
     "rank=same\n"
-    (string-join e "\n")
+    "ordering=out\n"
+    (string-join e "\n") "\n"
+    (string-join e " -> ") "[style=invis]"
     "}"))
 
 (define (properties->string ps)

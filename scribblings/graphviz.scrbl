@@ -199,7 +199,7 @@ vertexes and edges are defined using strings.
      (edge ("onRestart" "onStart"))
      (edge ("onStop" "killed"))
      (edge ("killed" "onCreate"))
-     (same-rank "Running" "onRestart" "killed")) #:ortho #t))
+     (same-rank "killed" "Running" "onRestart")) #:ortho #t))
 
 (scale (inset (digraph->pict d) 10) 0.8)
 }
@@ -224,7 +224,7 @@ vertexes and edges are defined using strings.
      (edge ("onRestart" "onStart"))
      (edge ("onStop" "killed"))
      (edge ("killed" "onCreate"))
-     (same-rank "Running" "onRestart" "killed")) #:ortho #t)]
+     (same-rank "killed" "Running" "onRestart")) #:ortho #t)]
 
 @subsection{Turnstile State Machine}
 
