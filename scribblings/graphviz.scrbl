@@ -13,7 +13,7 @@
                                            #:border-color "black")
                  15 -3 3) 10))
 @(define start-pict (shadowed-box 120 40 "LightSkyBlue"))
-@(define node-pict (shadowed-box 140 40 "Gainsboro"))
+@(define node-pict (shadowed-box 160 40 "Gainsboro"))
 @(define running-pict (shadowed-box 150 40 "Aquamarine"))
 @(define terminal-pict (shadowed-box 150 40 "Salmon"))
 
@@ -174,7 +174,7 @@ vertexes and edges are defined using strings.
                  15 -3 3) 10))
 
 (define start-pict (shadowed-box 120 40 "LightSkyBlue"))
-(define node-pict (shadowed-box 140 40 "Gainsboro"))
+(define node-pict (shadowed-box 160 40 "Gainsboro"))
 (define running-pict (shadowed-box 150 40 "Aquamarine"))
 (define terminal-pict (shadowed-box 150 40 "Salmon"))
 

@@ -15,7 +15,7 @@
 ;;
 ;; converts the given dot definition to a pict
 ;;
-(define (dot->pict str #:node-picts [node-picts (make-hash)])
+(define (dot->pict str #:node-picts [node-picts (make-immutable-hash)])
   (define dot-output (run-dot str "json"))
   (define xdot-json (read-json dot-output))
   (xdot-json->pict xdot-json node-picts))
@@ -68,7 +68,7 @@
                             [stipple #f]))
 
       ;; actual drawing
-      (xdot-object-draw dc jsexpr node-picts)
+      (xdot-object-draw dc jsexpr node-picts (make-hash))
 
       ;; restore dc state
       (send dc set-transformation transformation)
@@ -81,7 +81,7 @@
 ;;
 ;; drwas a given "dot" object (in json format) on the given dc
 ;;
-(define (xdot-object-draw dc jsexpr node-picts)
+(define (xdot-object-draw dc jsexpr node-picts extra)
   ;; save state
   (define brush (send dc get-brush))
   (define pen (send dc get-pen))
@@ -90,6 +90,14 @@
 
   (define name (hash-ref jsexpr `name "XYZ"))
   (define node-pict (hash-ref node-picts name #f))
+  (define spline-instruction
+    (filter (λ (x) (equal? (hash-ref x `op) "b"))
+            (hash-ref jsexpr `_draw_ `())))
+  (define spline-pts
+    (cond
+      [(or (null? spline-instruction)
+           (not (hash-has-key? jsexpr `head))) `()]
+      [else (hash-ref (car spline-instruction) `points `())]))
 
   (cond
     [(pict? node-pict)
@@ -108,15 +116,15 @@
   ;; apply drawing instructions
   (for* ([key draw-keys]
          [instruction (hash-ref jsexpr key `())])
-    (apply-instruction dc instruction))
+    (apply-instruction dc instruction spline-pts))
 
   ;; recursively draw objects
   (for* ([object (hash-ref jsexpr `objects `())])
-    (xdot-object-draw dc object node-picts))
+    (xdot-object-draw dc object node-picts extra))
   ;; recursively draw edges
   (for* ([edge (hash-ref jsexpr `edges `())])
     (if (hash? edge)
-        (xdot-object-draw dc edge node-picts)
+        (xdot-object-draw dc edge node-picts extra)
         `()))
 
   ;; restore state
@@ -129,7 +137,7 @@
 ;;
 ;; Applies the given "dot" instruction
 ;;
-(define (apply-instruction dc instruction)
+(define (apply-instruction dc instruction edge-spline)
   (match instruction
 
     ;; set color
@@ -206,12 +214,21 @@
     ;; draw text
     [(hash-table (`op "T") (`pt (list x y)) (`align align) (`width width) (`text text))
      (define-values (w h d c) (send dc get-text-extent text))
+     (define preferred-x
+       (calculate-text-left x y edge-spline))
      (define left
-       (match align
-         ["l" x]
-         ["c" (- x (/ w 2))]
-         ["r" (- x w)]
+       (cond
+         [(number? preferred-x) (- preferred-x (/ width 2))]
+         [(equal? align "l") x]
+         [(equal? align "c") (- x (/ w 2))]
+         [(equal? align "r") (- x w)]
          [else x]))
+     (cond
+       [(number? preferred-x) (let ([pen (send dc get-pen)])
+                                (send dc set-pen "white" 0 `solid)
+                                (send dc draw-rectangle left (- y (* h 0.75)) w h)
+                                (send dc set-pen pen))]
+       [else 0])
      (send dc draw-text text left (- y (/ h 2) d))]
     
     ;; draw spline
@@ -271,6 +288,20 @@
 ;; Misc. utility functions
 ;;
 
+
+(define (calculate-text-left x y edge-spline)
+  (cond
+    [(< (length edge-spline) 2) `()]
+    [else (define p1 (first edge-spline))
+          (define p2 (second edge-spline))
+          (if (and (between y (second p1) (second p2))
+                   #t)
+              (first p1)
+              (calculate-text-left x y (cdr edge-spline)))]))
+
+(define (between a b c)
+  (or (< b a c)
+      (< c a b)))
 
 (define (make-points lst)
   (for/list ([p lst])
