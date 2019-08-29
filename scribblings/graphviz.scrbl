@@ -204,6 +204,9 @@ vertexes and edges are defined using strings.
 (scale (inset (digraph->pict d) 10) 0.8)
 }
 
+ @figure[
+ "android-activity-lifecycle"
+ "Android Activity Lifecycle"
 @digraph->pict-cached[@(make-digraph
    `(("Start" #:label "Activity Starts" #:shape ,start-pict)
      ("onCreate" #:label "onCreate()" #:shape ,node-pict)
@@ -224,7 +227,7 @@ vertexes and edges are defined using strings.
      (edge ("onRestart" "onStart"))
      (edge ("onStop" "killed"))
      (edge ("killed" "onCreate"))
-     (same-rank "killed" "Running" "onRestart")) #:ortho #t)]
+     (same-rank "killed" "Running" "onRestart")) #:ortho #t)]]
 
 @subsection{Turnstile State Machine}
 
