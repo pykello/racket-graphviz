@@ -218,7 +218,7 @@
        (calculate-text-left x y edge-spline))
      (define left
        (cond
-         [(number? preferred-x) (- preferred-x (/ width 2))]
+         [(number? preferred-x) (- preferred-x (/ width 2) 10)]
          [(equal? align "l") x]
          [(equal? align "c") (- x (/ w 2))]
          [(equal? align "r") (- x w)]
