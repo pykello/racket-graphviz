@@ -30,9 +30,33 @@
      (write-string str stdin)
      (newline stdin)
      (close-output-port stdin)
-     (ctl 'wait)
-     (cond [(eq? (ctl 'status) 'done-error) (error (read-string 4096 stderr))]
-           [else stdout])]))
+     (define output (read-process-output stdout ctl))
+     (cond [(eq? (ctl 'status) 'done-error) (error (port->string stderr))]
+           [else (open-input-string output)])]))
+
+
+;;
+;; Reads the process output until eof, or timeout, or error
+;;
+(define (read-process-output port ctl [timeout 5000])
+  (define expire (+ (current-inexact-milliseconds) timeout))
+  (define (test-func)
+    (or (equal? (ctl 'status) 'done-error)
+        (> (current-inexact-milliseconds) expire)))
+  (read-until port test-func))
+
+
+(define (read-until port test-func)
+  (define (read-until-rec)
+    (cond
+      [(test-func) '()]
+      [else (define bs (make-bytes 4096))
+            (define result (read-bytes-avail!* bs port))
+            (if (eof-object? result)
+                '()
+                (cons (bytes->string/utf-8 (subbytes bs 0 result))
+                      (read-until-rec)))]))
+  (apply string-append (read-until-rec)))
 
 ;;
 ;; converts output of dot in json format to a pict

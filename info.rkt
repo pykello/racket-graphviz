@@ -10,5 +10,5 @@
                      "rackunit-lib"))
 (define scribblings '(("scribblings/graphviz.scrbl" ())))
 (define pkg-desc "The goal of this library is to make composition of Racket Pict and Graphviz Diagrams possible.")
-(define version "0.0.1")
+(define version "0.0.2")
 (define pkg-authors '(pykello))
