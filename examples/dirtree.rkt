@@ -24,7 +24,7 @@
   (exit 0))
 
 (define (dirtree path depth)
-  (make-digraph (dirtree-defs path depth) #:ortho #f))
+  (make-digraph (dirtree-defs path depth) #:splines "true"))
 
 (define (dirtree-defs path depth)
   (let*-values

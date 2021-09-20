@@ -4,23 +4,25 @@
 (require pict)
 
 (provide (contract-out
-          [make-digraph (->* (list?) (#:ortho boolean?) digraph?)]
           [make-vertex (->* (string?) (#:shape (or/c pict? string?)) vertex?)]
           [make-edge (-> vertex? vertex? edge?)]
           [digraph->dot (-> digraph? string?)]
           [digraph->pict (-> digraph? pict?)]
           [digraph-node-picts (-> digraph? hash?)])
+         make-digraph
          (struct-out digraph)
          (struct-out vertex)
          (struct-out edge)
          (struct-out subgraph))
 
-(struct digraph (objects ortho))
+(struct digraph (objects attrs))
 (struct vertex (name label shape attrs))
 (struct edge (nodes attrs))
 (struct subgraph (label objects attrs))
 
-(define (make-vertex label #:shape (shape "record"))
+(define default-shape "none")
+
+(define (make-vertex label #:shape [shape default-shape])
   (define id (random 1 4294967087))
   (define name (string-append "n_" (number->string id)))
   (define attrs (make-immutable-hash))
@@ -31,8 +33,12 @@
   (define attrs (make-immutable-hash))
   (edge nodes attrs))
 
-(define (make-digraph defs #:ortho [ortho #f])
-  (digraph (map make-object defs) ortho))
+(define make-digraph 
+  (make-keyword-procedure
+    (lambda (kws kw-args . d)
+      (define defs (car d))
+      (define attrs (make-immutable-hash (map cons kws kw-args)))
+      (digraph (map make-object defs) attrs))))
 
 (define (make-object def)
   (cond
@@ -53,7 +59,7 @@
 ;; string->object functions
 
 (define (string->vertex s)
-  (vertex s s "record" (make-immutable-hash)))
+  (vertex s s default-shape (make-immutable-hash)))
 
 (define (string->edge s)
   (edge (string-split s #rx"[ ]*->[ ]*") (make-immutable-hash)))
@@ -69,7 +75,7 @@
   (define-values (attrs rest) (list->attrs (cdr lst)))
   (define name (first lst))
   (define label (hash-ref attrs `#:label name))
-  (define shape (hash-ref attrs `#:shape "record"))
+  (define shape (hash-ref attrs `#:shape default-shape))
   (define other-attrs
     (hash-remove-multi attrs `(#:label #:shape))) 
   (vertex name label shape other-attrs))
@@ -127,11 +133,9 @@
 
 (define (digraph->dot d)
   (define defs (objects->dot (digraph-objects d)))
-  (define splines (cond
-                    [(digraph-ortho d) "ortho"]
-                    [else "true"]))
+  (define attrs (hash->list (digraph-attrs d)))
   (string-append "digraph {\n"
-                 "   splines=" splines "\n"
+                 (string-join (map property->string attrs) "\n" #:after-last "\n")
                  (indent 4 defs)
                  "\n}"))
 
@@ -173,7 +177,7 @@
   (match v
     [(vertex name label shape attrs)
      (define shape-str (if (pict? shape)
-                           "record"
+                           default-shape
                            shape))
      (define basic-properties `((#:label . ,label)
                                 (#:shape . ,shape-str)))
