@@ -15,7 +15,7 @@
   (define digraph
     (make-digraph
      (append vertices edges)
-     #:ortho #t))
+     #:splines "ortho"))
   (digraph->pict digraph))
 
 (define (table->vertex table)
