@@ -8,7 +8,7 @@
           [digraph->dot (-> digraph? string?)]
           [digraph->pict (-> digraph? pict?)]
           [digraph-node-picts (-> digraph? hash?)])
-         make-digraph
+         make-digraph digraph-ortho
          (struct-out digraph) (struct-out vertex) (struct-out edge)
          (struct-out subgraph) (struct-out endpoint))
 
@@ -101,8 +101,27 @@
 (define (validate-graph graph)
   (unless (list? (digraph-objects graph))
     (invalid graph "expected a graph object list"))
-  (validate-attrs (digraph-attrs graph))
+  (normalize-graph-attrs (digraph-attrs graph))
   (for-each validate-object (digraph-objects graph)))
+
+(define (normalize-graph-attrs attrs)
+  (define normalized
+    (if (boolean? attrs) (hash '#:splines (if attrs "ortho" "true")) attrs))
+  (validate-attrs normalized)
+  (cond
+    [(hash-has-key? normalized '#:ortho)
+     (define ortho (hash-ref normalized '#:ortho))
+     (unless (boolean? ortho) (invalid ortho "#:ortho expects a boolean"))
+     (define splines (if ortho "ortho" "true"))
+     (when (and (hash-has-key? normalized '#:splines)
+                (not (equal? splines (value->string (hash-ref normalized '#:splines)))))
+       (invalid normalized "#:ortho and #:splines conflict"))
+     (hash-set (hash-remove normalized '#:ortho) '#:splines splines)]
+    [else normalized]))
+
+(define (digraph-ortho graph)
+  (equal? (hash-ref (normalize-graph-attrs (digraph-attrs graph)) '#:splines #f)
+          "ortho"))
 
 (define make-digraph
   (make-keyword-procedure
@@ -110,7 +129,7 @@
      (unless (and (= (length arguments) 1) (list? (car arguments)))
        (raise-arguments-error 'make-digraph "expected exactly one definitions list"
                               "arguments" arguments))
-     (define attrs (make-immutable-hash (map cons keywords values)))
+     (define attrs (normalize-graph-attrs (make-immutable-hash (map cons keywords values))))
      (validate-attrs attrs)
      (define graph (digraph (map make-object (car arguments)) attrs))
      (validate-graph graph)
@@ -271,5 +290,5 @@
                       "\n}")]))
   (parameterize ([current-node-names (node-name-map graph)])
     (string-append "digraph {\n"
-                 (string-join (map property->string (attribute-pairs (digraph-attrs graph))) "\n")
+                 (string-join (map property->string (attribute-pairs (normalize-graph-attrs (digraph-attrs graph)))) "\n")
                  "\n" (objects->dot (digraph-objects graph)) "\n}")))
