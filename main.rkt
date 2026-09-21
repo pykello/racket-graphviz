@@ -79,7 +79,11 @@
       "d -> g")))
 
  (for/list ([d examples])
-   (digraph->pict (make-digraph d))))
+   (define result (digraph->pict (make-digraph d)))
+   (check-true (pict? result))
+   (check-true (positive? (pict-width result)))
+   (check-true (positive? (pict-height result)))
+   result))
   
   
 

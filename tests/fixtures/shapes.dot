@@ -1,0 +1,11 @@
+digraph {
+  Locked [shape=circle];
+  Unlocked [shape=doublecircle];
+  Octagon [shape=doubleoctagon];
+  Triple [shape=tripleoctagon];
+  Locked:n -> Locked:n [label="Push"];
+  Locked -> Unlocked [label="Coin"];
+  Unlocked -> Locked [label="Push"];
+  Unlocked:n -> Unlocked:n [label="Coin"];
+  Octagon -> Triple;
+}
