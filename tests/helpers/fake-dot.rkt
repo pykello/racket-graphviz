@@ -11,4 +11,12 @@
      (write-bytes (make-bytes 200000 66))
      (port->bytes (current-input-port)) (void)]
     [(error) (display "failure" (current-error-port)) (exit 7)]
+    [(early) (exit 0)]
+    [(warning) (display "warning" (current-error-port)) (display "ok")]
+    [(marker)
+     (define filename (vector-ref (current-command-line-arguments) 1))
+     (call-with-output-file filename (lambda (out) (display "ready" out)))
+     (sleep 1)
+     (call-with-output-file (string-append filename ".leaked")
+       (lambda (out) (display "alive" out)))]
     [(sleep) (sleep 60)]))
