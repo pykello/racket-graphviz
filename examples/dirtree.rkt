@@ -8,7 +8,6 @@
 
 (define (main)
   (define depth (make-parameter 1))
-  (define out-file (make-parameter "dirtree.svg"))
 
   (define path
     (command-line
@@ -24,26 +23,34 @@
   (exit 0))
 
 (define (dirtree path depth)
+  (unless (exact-nonnegative-integer? depth)
+    (raise-argument-error 'dirtree "exact-nonnegative-integer?" depth))
+  (unless (or (directory-exists? path) (file-exists? path) (link-exists? path))
+    (raise-arguments-error 'dirtree "path does not exist" "path" path))
   (make-digraph (dirtree-defs path depth) #:splines "true"))
 
 (define (dirtree-defs path depth)
   (let*-values
       ([(base name must-be-dir) (split-path path)]
        [(is-dir?)               (directory-exists? path)]
-       [(label)                 (path->string name)]
+       [(label)                 (path->string (if (path? name) name (path->complete-path path)))]
        [(shape-width)           (+ 10 (text-width label))]
        [(color)                 (if is-dir? "cyan" "bisque")]
        [(shape)                 (file-icon shape-width 60 color)]
        [(root)                  (make-vertex label #:shape shape)]
        [(sub-defs)              (cond
-                                  [(= depth 0) `()]
+                                  [(or (= depth 0) (link-exists? path)) `()]
                                   [is-dir? (subtree-defs root path depth)]
                                   [else `()])])
     (cons root sub-defs)))
 
 (define (subtree-defs root-node root-path depth)
   (append*
-   (for/list ([sub (directory-list root-path #:build? #t)])
+   (for/list ([sub (with-handlers ([exn:fail:filesystem?
+                                     (lambda (error)
+                                       (log-warning "dirtree: ~a" (exn-message error))
+                                       '())])
+                       (directory-list root-path #:build? #t))])
      (define sub-defs (dirtree-defs (path->string sub) (- depth 1)))
      (define sub-node (first sub-defs))
      (cons (make-edge root-node sub-node)
@@ -54,4 +61,7 @@
   (define-values (width height c d) (send text-size-dc get-text-extent s))
   (exact-round width))
 
-(main)
+(module+ main (main))
+
+
+(module+ test-support (provide dirtree))

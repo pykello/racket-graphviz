@@ -36,4 +36,4 @@
   
   (exit 0))
 
-(main)
+(module+ main (main))
