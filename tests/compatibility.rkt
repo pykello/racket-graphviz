@@ -11,6 +11,7 @@
   (check-true (digraph-ortho (make-digraph '("a") #:ortho #t #:splines "ortho")))
   (check-exn exn:fail:contract?
              (lambda () (make-digraph '("a") #:ortho #t #:splines "curved")))
+  (check-true (digraph-ortho (digraph '() (make-hash (list (cons '#:ortho #t))))))
   (define a (vertex "a" "A" "box" (hash)))
   (define b (make-vertex "B"))
   (define e (make-edge a b))

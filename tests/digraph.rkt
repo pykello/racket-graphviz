@@ -1,10 +1,12 @@
 #lang racket
 (require rackunit pict json "../lib/digraph.rkt" "../lib/dot.rkt")
 (module+ test
-  (for ([definitions (list '(42) '(()) '(("a" #:label)) '((edge ("a")))
+  (for ([definitions (list '(42) '((same-rank)) '(("a" #:label)) '((edge ("a")))
                            '(("a" unexpected)) '((subgraph "x")) '("a ->"))])
     (check-exn exn:fail:contract? (lambda () (make-digraph definitions))))
   (check-exn exn:fail:contract? (lambda () (make-digraph '("a") '("b"))))
+  (check-equal? (digraph-objects (make-digraph '(()))) '(()))
+  (check-equal? (digraph->dot (make-digraph '(()))) (digraph->dot (make-digraph '())))
   (define graph (make-digraph '((subgraph "first" ("a"))
                                 (subgraph "second" ("b"))
                                 (same-rank "a")) #:nodesep 1/2))

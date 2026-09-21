@@ -97,7 +97,7 @@
      (for-each validate-object objects)
      (validate-attrs attrs)]
     [(? list? nodes)
-     (unless (and (pair? nodes) (andmap valid-endpoint? nodes))
+     (unless (andmap valid-endpoint? nodes)
        (invalid nodes "same-rank needs at least one node"))]
     [_ (invalid object "expected a vertex, edge, subgraph, or same-rank group")]))
 
@@ -109,7 +109,9 @@
 
 (define (normalize-graph-attrs attrs)
   (define normalized
-    (if (boolean? attrs) (hash '#:splines (if attrs "ortho" "true")) attrs))
+    (cond [(boolean? attrs) (hash '#:splines (if attrs "ortho" "true"))]
+          [(hash? attrs) (make-immutable-hash (hash->list attrs))]
+          [else attrs]))
   (validate-attrs normalized)
   (cond
     [(hash-has-key? normalized '#:ortho)
@@ -153,6 +155,7 @@
 
 (define (make-object definition)
   (cond
+    [(null? definition) '()]
     [(or (vertex? definition) (edge? definition) (subgraph? definition)) definition]
     [(string? definition)
      (if (string-contains? definition "->")
@@ -163,7 +166,9 @@
          (vertex definition definition default-shape (hash)))]
     [(and (list? definition) (pair? definition))
      (match definition
-       [(list* 'same-rank nodes) nodes]
+       [(list* 'same-rank nodes)
+        (when (null? nodes) (invalid definition "same-rank needs at least one node"))
+        nodes]
        [(list* 'subgraph rest)
         (define-values (attrs positional) (list->attrs rest))
         (match positional
@@ -285,6 +290,7 @@
                id (quote-value label)
                (string-join (map property->string (attribute-pairs attrs)) "\n")
                (objects->dot objects))]
+      [(list) ""]
       [(? list? nodes)
        (define names (map endpoint->dot nodes))
        (string-append "{rank=same; ordering=out;\n" (string-join names ";\n")
