@@ -94,6 +94,28 @@
       (loop (cdddr rest))))
   path)
 
+(define installed-faces (delay (get-face-list)))
+
+(define (graphviz-font size face)
+  (define family
+    (cond [(regexp-match? #rx"(?i:courier|mono)" face) 'modern]
+          [(regexp-match? #rx"(?i:arial|helvetica|sans)" face) 'swiss]
+          [else 'roman]))
+  (define aliases
+    (case family
+      [(modern) '("Courier New" "Nimbus Mono PS" "Liberation Mono" "DejaVu Sans Mono")]
+      [(swiss) '("Arial" "Arimo" "Helvetica" "Nimbus Sans" "Liberation Sans")]
+      [else '("Times New Roman" "Nimbus Roman" "Liberation Serif" "DejaVu Serif")]))
+  (define selected
+    (for*/first ([candidate (in-list (cons face aliases))]
+                 [installed (in-list (force installed-faces))]
+                 #:when (string-ci=? candidate installed))
+      installed))
+  (make-font #:size size #:face selected #:family family
+             #:weight (if (regexp-match? #rx"(?i:bold)" face) 'bold 'normal)
+             #:style (if (regexp-match? #rx"(?i:italic|oblique)" face) 'italic 'normal)
+             #:size-in-pixels? #t #:hinting 'unaligned))
+
 (define (apply-instruction dc instruction state)
   (match instruction
     [(hash-table ('op "c") ('color color) ('grad "none"))
@@ -111,12 +133,7 @@
     [(hash-table ('op "L") ('points points))
      (send dc draw-lines (map (lambda (p) (cons (first p) (second p))) points))]
     [(hash-table ('op "F") ('size size) ('face face))
-     (define family
-       (cond [(regexp-match? #rx"(?i:courier|mono)" face) 'modern]
-             [(regexp-match? #rx"(?i:arial|helvetica|sans)" face) 'swiss]
-             [else 'roman]))
-     (define font (make-font #:size size #:face face #:family family
-                             #:size-in-pixels? #t))
+     (define font (graphviz-font size face))
      (send dc set-font font)
      (when (hash? state)
        (hash-set! state 'font font)
@@ -132,10 +149,11 @@
                                (if (or (flag? 3) (flag? 4)) 0.8 1))
                       #:face (send font get-face)
                       #:family (send font get-family)
-                      #:style (if (flag? 1) 'italic 'normal)
-                      #:weight (if (flag? 0) 'bold 'normal)
+                      #:style (if (flag? 1) 'italic (send font get-style))
+                      #:weight (if (flag? 0) 'bold (send font get-weight))
                       #:underlined? (flag? 2)
-                      #:size-in-pixels? (send font get-size-in-pixels)))
+                      #:size-in-pixels? (send font get-size-in-pixels)
+                      #:hinting 'unaligned))
      (when (hash? state) (hash-set! state 'flags flags))]
     [(hash-table ('op "T") ('pt (list x y)) ('align align)
                  ('width width) ('text text))
