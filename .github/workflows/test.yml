@@ -60,6 +60,7 @@ jobs:
         run: |
           raco scribble --htmls ++xref-in setup/xref load-collections-xref --dest build/manual scribblings/graphviz.scrbl
           racket tools/gallery.rkt build/gallery
+          racket tools/readme-images.rkt build/readme-images
           racket tools/benchmark.rkt > build/benchmark.json
           racket example.rkt
           racket examples/erdiagram.rkt > build/erdiagram.svg

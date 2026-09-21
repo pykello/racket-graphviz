@@ -35,7 +35,11 @@ and JSON support; a missing dependency must fail that job.
 
 ```sh
 racket tools/gallery.rkt build/gallery
+racket tools/readme-images.rkt images
 ```
+
+The second command refreshes the committed README diagrams from the
+actual examples; the directory-tree snapshot uses `tests/fixtures`.
 
 Open `build/gallery/index.html`. Native and pict SVG/PNG outputs are
 paired for issues #6, #8, and #9, plus transformed custom picts. The
