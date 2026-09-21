@@ -1,0 +1,98 @@
+name: Tests
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-22.04
+            racket: '8.2'
+            architecture: x64
+          - os: ubuntu-22.04
+            racket: stable
+            architecture: x64
+          - os: macos-14
+            racket: stable
+            architecture: arm64
+          - os: windows-2022
+            racket: stable
+            architecture: x64
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: Bogdanp/setup-racket@v1.15
+        with:
+          version: ${{ matrix.racket }}
+          architecture: ${{ matrix.architecture }}
+          distribution: full
+      - name: Install Linux Graphviz and fonts
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y graphviz fonts-liberation
+      - name: Install macOS Graphviz
+        if: runner.os == 'macOS'
+        run: brew list graphviz || brew install graphviz
+      - name: Install Windows Graphviz
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          choco install graphviz --yes --no-progress
+          "$env:ProgramFiles\Graphviz\bin" >> $env:GITHUB_PATH
+      - name: Install collection and require JSON support
+        shell: bash
+        run: |
+          racket --version
+          dot -V
+          raco pkg install --auto --no-setup --name graphviz --link "$GITHUB_WORKSPACE"
+          racket -e '(require graphviz json) (void (read-json (run-dot "digraph {}" "json")))'
+      - name: Test and check package dependencies
+        shell: bash
+        run: |
+          raco test tests main.rkt lib
+          raco setup --check-pkg-deps --no-docs --pkgs graphviz
+      - name: Build manual and visual gallery
+        shell: bash
+        run: |
+          raco scribble --htmls --dest build/manual scribblings/graphviz.scrbl
+          racket tools/gallery.rkt build/gallery
+          racket tools/benchmark.rkt > build/benchmark.json
+          racket example.rkt
+          racket examples/erdiagram.rkt > build/erdiagram.svg
+          racket examples/dirtree.rkt -d 1 tests/fixtures > build/dirtree.svg
+      - name: Verify an independently installed source archive
+        shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/graphviz-archive"
+          raco pkg create --source --from-install --dest "$RUNNER_TEMP/graphviz-archive" graphviz
+          export PLTUSERHOME="$RUNNER_TEMP/graphviz-fresh"
+          raco pkg install --no-setup --deps fail --name graphviz "$RUNNER_TEMP/graphviz-archive/graphviz.zip"
+          raco setup --check-pkg-deps --no-docs --pkgs graphviz
+          racket -e '(require graphviz) (unless (pict? (digraph->pict (make-digraph (list "a -> b")))) (error "render failed"))'
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: graphviz-${{ matrix.os }}-${{ matrix.racket }}
+          path: build/
+  visual-reference:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: Bogdanp/setup-racket@v1.15
+        with:
+          version: '8.2'
+          distribution: full
+      - name: Install reference renderer and fonts
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y graphviz=2.42.2-6ubuntu0.1 fonts-liberation=1:1.07.4-11 fonts-dejavu-core=2.37-2build1
+      - run: racket tools/gallery.rkt build/gallery
+      - uses: actions/upload-artifact@v4
+        with:
+          name: graphviz-visual-reference
+          path: build/gallery/

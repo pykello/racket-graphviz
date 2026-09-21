@@ -1,5 +1,4 @@
 *~
-*/compiled/*
-compiled/*
-doc/*
-
+compiled/
+doc/
+build/
