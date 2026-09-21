@@ -1,7 +1,7 @@
 #lang racket
 
 (require pict)
-(require graphviz)
+(require "main.rkt")
 
 (define examples
   `(
@@ -43,5 +43,8 @@
                 "f -> g"))
      "d -> g")))
 
-(for/list ([d examples])
-  (digraph->pict (make-digraph d)))
+(module+ main
+  (for/list ([d examples])
+    (digraph->pict (make-digraph d))))
+
+(module+ test-support (provide examples))

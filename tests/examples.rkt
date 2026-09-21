@@ -1,8 +1,10 @@
 #lang racket
 (require rackunit racket/runtime-path "../lib/digraph.rkt"
          (submod "../examples/dirtree.rkt" test-support))
+(define-runtime-path root-example "../example.rkt")
 (define-runtime-path er-example "../examples/erdiagram.rkt")
 (module+ test
+  (check-equal? (with-output-to-string (lambda () (dynamic-require root-example #f))) "")
   (check-equal? (with-output-to-string (lambda () (dynamic-require er-example #f))) "")
   (define directory (make-temporary-file "graphviz-tree~a" 'directory))
   (dynamic-wind
