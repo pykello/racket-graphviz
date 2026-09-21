@@ -1,0 +1,106 @@
+{
+  "memory-note": "Sampled Racket memory; excludes Graphviz child memory",
+  "platform": "unix",
+  "racket": "8.2",
+  "results": [
+    {
+      "construct": {
+        "allocated-bytes": 14800,
+        "milliseconds": 0.11245099999996455,
+        "sampled-memory-bytes": 104181284
+      },
+      "draw": {
+        "allocated-bytes": 2165120,
+        "milliseconds": 18.96900400000004,
+        "sampled-memory-bytes": 106684212
+      },
+      "nodes": 10,
+      "parse": {
+        "allocated-bytes": 483952,
+        "milliseconds": 1.6259479999998803,
+        "sampled-memory-bytes": 104606964
+      },
+      "process": {
+        "allocated-bytes": 1197024,
+        "milliseconds": 77.81911600000012,
+        "sampled-memory-bytes": 105348980
+      },
+      "render": {
+        "allocated-bytes": 2373636,
+        "milliseconds": 65.76299900000004,
+        "sampled-memory-bytes": 106564640
+      },
+      "serialize": {
+        "allocated-bytes": 32976,
+        "milliseconds": 0.33216500000025917,
+        "sampled-memory-bytes": 104192148
+      }
+    },
+    {
+      "construct": {
+        "allocated-bytes": 117744,
+        "milliseconds": 0.4400590000000193,
+        "sampled-memory-bytes": 104917436
+      },
+      "draw": {
+        "allocated-bytes": 9022432,
+        "milliseconds": 127.91038799999933,
+        "sampled-memory-bytes": 112814972
+      },
+      "nodes": 100,
+      "parse": {
+        "allocated-bytes": 4246272,
+        "milliseconds": 18.83146399999987,
+        "sampled-memory-bytes": 109162132
+      },
+      "process": {
+        "allocated-bytes": 2933200,
+        "milliseconds": 93.68037400000003,
+        "sampled-memory-bytes": 107679916
+      },
+      "render": {
+        "allocated-bytes": 8830260,
+        "milliseconds": 89.15142400000013,
+        "sampled-memory-bytes": 112584112
+      },
+      "serialize": {
+        "allocated-bytes": 267248,
+        "milliseconds": 1.3877070000003187,
+        "sampled-memory-bytes": 105025988
+      }
+    },
+    {
+      "construct": {
+        "allocated-bytes": 595648,
+        "milliseconds": 2.161184000000503,
+        "sampled-memory-bytes": 105384748
+      },
+      "draw": {
+        "allocated-bytes": 44197168,
+        "milliseconds": 452.4888120000005,
+        "sampled-memory-bytes": 114220316
+      },
+      "nodes": 500,
+      "parse": {
+        "allocated-bytes": 21415632,
+        "milliseconds": 92.37390300000061,
+        "sampled-memory-bytes": 112988716
+      },
+      "process": {
+        "allocated-bytes": 9760096,
+        "milliseconds": 198.89963499999976,
+        "sampled-memory-bytes": 110123612
+      },
+      "render": {
+        "allocated-bytes": 42658196,
+        "milliseconds": 380.45522299999993,
+        "sampled-memory-bytes": 113903008
+      },
+      "serialize": {
+        "allocated-bytes": 1423120,
+        "milliseconds": 7.4896630000002915,
+        "sampled-memory-bytes": 106228284
+      }
+    }
+  ]
+}
