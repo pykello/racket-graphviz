@@ -51,6 +51,7 @@
      (define custom (hash-ref node-picts name #f))
      (define (instructions keys)
        (for ([key (in-list keys)])
+         (define state (make-hasheq))
          (for ([instruction (in-list (hash-ref object key '()))])
            (with-handlers ([exn:fail?
                             (lambda (error)
@@ -58,7 +59,7 @@
                                'dot->pict (exn-message error)
                                "object" name "drawing" key
                                "instruction" instruction))])
-             (apply-instruction dc instruction '())))))
+             (apply-instruction dc instruction state)))))
      (when (pict? custom)
        (match-define (list x y) (numbers (hash-ref object 'pos) 2))
        (draw-pict custom dc (- x (/ (pict-width custom) 2))
@@ -93,7 +94,7 @@
       (loop (cdddr rest))))
   path)
 
-(define (apply-instruction dc instruction edge-spline)
+(define (apply-instruction dc instruction state)
   (match instruction
     [(hash-table ('op "c") ('color color) ('grad "none"))
      (define parsed (string->color color))
@@ -109,59 +110,58 @@
      (if (equal? op "e") (unfilled dc draw) (draw))]
     [(hash-table ('op "L") ('points points))
      (send dc draw-lines (map (lambda (p) (cons (first p) (second p))) points))]
-    [(hash-table (`op "F") (`size size) (`face face))
+    [(hash-table ('op "F") ('size size) ('face face))
      (define family
-       (match face
-         ["Arial" `swiss]
-         [else `roman]))
-     (define size-scaler
-       (match face
-         ["Arial" 0.8]
-         [else 0.75]))
-     (send dc set-font (make-object font% (* size size-scaler) family))]
-
-    [(hash-table (`op "t") (`fontchar f))
-     (define font (send dc get-font))
-     (define style
-       (if (= f 2)
-           `italic
-           (send font get-style)))
-     (define weight
-       (if (= f 1)
-           `bold
-           (send font get-weight)))
-     (define underlined
-       (if (= f 4)
-           `#t
-           (send font get-underlined)))
-     (define new-font
-       (make-object font%
-         (send font get-size)
-         (send font get-family)
-         style
-         weight
-         underlined))
-     (send dc set-font new-font)]
-
-    [(hash-table (`op "T") (`pt (list x y)) (`align align) (`width width) (`text text))
-     (define-values (w h d c) (send dc get-text-extent text))
-     (define preferred-x
-       (calculate-text-left x y edge-spline))
+       (cond [(regexp-match? #rx"(?i:courier|mono)" face) 'modern]
+             [(regexp-match? #rx"(?i:arial|helvetica|sans)" face) 'swiss]
+             [else 'roman]))
+     (define font (make-font #:size size #:face face #:family family
+                             #:size-in-pixels? #t))
+     (send dc set-font font)
+     (when (hash? state)
+       (hash-set! state 'font font)
+       (hash-set! state 'flags 0))]
+    [(hash-table ('op "t") ('fontchar flags))
+     (unless (and (exact-integer? flags) (<= 0 flags 127))
+       (error 'dot->pict "invalid font characteristics: ~a" flags))
+     (define font (if (hash? state) (hash-ref state 'font (send dc get-font))
+                      (send dc get-font)))
+     (define (flag? bit) (bitwise-bit-set? flags bit))
+     (send dc set-font
+           (make-font #:size (* (send font get-size)
+                               (if (or (flag? 3) (flag? 4)) 0.8 1))
+                      #:face (send font get-face)
+                      #:family (send font get-family)
+                      #:style (if (flag? 1) 'italic 'normal)
+                      #:weight (if (flag? 0) 'bold 'normal)
+                      #:underlined? (flag? 2)
+                      #:size-in-pixels? (send font get-size-in-pixels)))
+     (when (hash? state) (hash-set! state 'flags flags))]
+    [(hash-table ('op "T") ('pt (list x y)) ('align align)
+                 ('width width) ('text text))
+     (define-values (w h descent space) (send dc get-text-extent text))
+     (define flags (if (hash? state) (hash-ref state 'flags 0) 0))
+     (define font (if (hash? state) (hash-ref state 'font (send dc get-font))
+                      (send dc get-font)))
+     (define baseline
+       (+ y (* (send font get-size)
+               (cond [(bitwise-bit-set? flags 3) -0.35]
+                     [(bitwise-bit-set? flags 4) 0.2]
+                     [else 0]))))
      (define left
-       (cond
-         [(number? preferred-x) (- preferred-x (/ width 2) 10)]
-         [(equal? align "l") x]
-         [(equal? align "c") (- x (/ w 2))]
-         [(equal? align "r") (- x w)]
-         [else x]))
-     (cond
-       [(number? preferred-x) (let ([pen (send dc get-pen)])
-                                (send dc set-pen "white" 0 `solid)
-                                (send dc draw-rectangle left (- y (* h 0.75)) w h)
-                                (send dc set-pen pen))]
-       [else 0])
-     (send dc draw-text text left (- y (/ h 2) d))]
-    
+       (match align
+         ["l" x] ["c" (- x (/ w 2))] ["r" (- x w)]
+         [_ (error 'dot->pict "invalid text alignment: ~a" align)]))
+     (send dc draw-text text left (- baseline (- h descent)))
+     (when (or (bitwise-bit-set? flags 5) (bitwise-bit-set? flags 6))
+       (call-with-dc-state
+        dc
+        (lambda ()
+          (send dc set-pen (send dc get-text-foreground) 1 'solid)
+          (for ([bit '(5 6)] [fraction '(0.35 0.9)])
+            (when (bitwise-bit-set? flags bit)
+              (define line-y (- baseline (* fraction (- h descent))))
+              (send dc draw-line left line-y (+ left w) line-y))))))]
     [(hash-table ('op (and op (or "b" "B"))) ('points points))
      (define (draw) (send dc draw-path (points->path points)))
      (if (equal? op "b") (unfilled dc draw) (draw))]
@@ -181,14 +181,6 @@
        [_ (error 'dot->pict "unsupported Graphviz style: ~a" style)])]
     [_ (raise-arguments-error 'dot->pict "unsupported Graphviz drawing operation"
                               "instruction" instruction)]))
-
-(define (calculate-text-left x y points)
-  (cond
-    [(< (length points) 2) #f]
-    [(or (< (second (first points)) y (second (second points)))
-         (< (second (second points)) y (second (first points))))
-     (first (first points))]
-    [else (calculate-text-left x y (cdr points))]))
 
 (define (string->color value)
   (unless (regexp-match? #px"^#[0-9a-fA-F]{6}(?:[0-9a-fA-F]{2})?$" value)
