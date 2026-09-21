@@ -12,7 +12,7 @@
          (all-from-out "lib/erdiagram.rkt"))
 
 (module+ test
-  (require rackunit))
+  (require rackunit racket/system))
 
 (module+ test
  (define examples
@@ -52,14 +52,12 @@
                  "f -> g"))
       "d -> g")))
 
- (for/list ([d examples])
-   (define result (digraph->pict (make-digraph d)))
-   (check-true (pict? result))
-   (check-true (positive? (pict-width result)))
-   (check-true (positive? (pict-height result)))
-   result))
-  
-  
+ (when (find-executable-path "dot")
+   (for ([d examples])
+     (define result (digraph->pict (make-digraph d)))
+     (check-true (pict? result))
+     (check-true (positive? (pict-width result)))
+     (check-true (positive? (pict-height result))))))
 
 (module+ main
 
