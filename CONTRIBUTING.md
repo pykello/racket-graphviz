@@ -7,7 +7,7 @@ the checkout, register the collection and run the suite:
 raco pkg install --name graphviz --link "$PWD"
 raco test tests main.rkt lib
 raco setup --check-pkg-deps --no-docs --pkgs graphviz
-raco scribble --htmls --dest build/manual scribblings/graphviz.scrbl
+raco scribble --htmls ++xref-in setup/xref load-collections-xref --dest build/manual scribblings/graphviz.scrbl
 ```
 
 Set `TMPDIR` to a writable temporary directory when the system default is

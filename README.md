@@ -71,8 +71,9 @@ are data; use an explicit node list for a name containing `->`.
 | Gradients and external images | Explicit unsupported-operation errors |
 | Unknown drawing operations | Contextual errors instead of silent omission |
 
-Fonts are resolved by the local drawing backend. Exact pixels can differ
-between systems; use matching fonts for comparison with native Graphviz.
+Installed requested font faces take precedence. Missing faces use
+family-compatible aliases (such as Nimbus Roman for Times-Roman) before
+the drawing backend's family fallback. Exact pixels can differ between systems; use matching fonts for comparison with native Graphviz.
 Superscript/subscript and text decorations use the selected font metrics.
 The renderer retains Graphviz layout rather than applying label offsets.
 

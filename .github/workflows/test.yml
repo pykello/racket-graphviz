@@ -58,7 +58,7 @@ jobs:
       - name: Build manual and visual gallery
         shell: bash
         run: |
-          raco scribble --htmls --dest build/manual scribblings/graphviz.scrbl
+          raco scribble --htmls ++xref-in setup/xref load-collections-xref --dest build/manual scribblings/graphviz.scrbl
           racket tools/gallery.rkt build/gallery
           racket tools/benchmark.rkt > build/benchmark.json
           racket example.rkt

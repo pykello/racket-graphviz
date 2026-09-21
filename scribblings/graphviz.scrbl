@@ -19,7 +19,7 @@
 
 @title{Racket Graphviz Integration}
 @author{@(author+email "Hadi Moshayedi" "hadi@moshayedi.net")}
-@defmodule[graphviz]
+@defmodule[graphviz #:use-sources (graphviz/main)]
 The goal of this library is to make composition of @racket[pict] and
 @link["https://www.graphviz.org/"]{graphviz} diagrams possible.
 
@@ -75,7 +75,8 @@ Furthermore, a set of vertexes can be grouped in a subgraph, as show in @figure-
  Values may be strings, booleans, or finite real numbers. Attribute names
  remain extensible. Duplicate attributes in a definition retain the first
  value, matching the historical parser. Malformed definitions raise an
- argument error rather than silently losing graph content.
+ argument error rather than silently losing graph content. Empty
+ definitions retain their historical no-op behavior.
 
  The compatibility keyword @racket[#:ortho] accepts a boolean: true selects
  @tt{splines="ortho"}, false selects @tt{splines="true"}. A conflicting
@@ -344,8 +345,9 @@ The library does not start Graphviz merely because it is imported.
 The renderer supports filled and unfilled ellipses, polygons and cubic
 splines, polylines, RGB/RGBA colors, custom pict nodes, and all six drawing
 arrays for graph/node/edge labels and arrows. Font styles combine, and
-head/tail labels are retained. Fonts use local backend resolution; exact
-rasterization is platform dependent. Gradients and external image
+head/tail labels are retained. Installed requested faces take precedence. Missing faces use compatible
+aliases, such as Nimbus Roman for Times-Roman, followed by the drawing
+backend's family fallback. Exact rasterization is platform dependent. Gradients and external image
 instructions currently produce contextual unsupported-feature errors.
 
 All exports from @racketmodname[pict] continue to be re-exported for
