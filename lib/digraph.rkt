@@ -67,9 +67,10 @@
 (define (validate-attrs attrs)
   (unless (hash? attrs) (invalid attrs "expected an attribute hash"))
   (for ([(key value) (in-hash attrs)])
-    (unless (and (keyword? key)
-                 (regexp-match? #px"^[A-Za-z_][A-Za-z_0-9]*$" (keyword->string key)))
+    (unless (keyword? key)
       (invalid key "expected a Graphviz attribute keyword"))
+    (when (regexp-match? #px"\\\\(?:[\"\n]|$)" (keyword->string key))
+      (invalid key "attribute name cannot be represented as a DOT identifier"))
     (unless (attribute-value? value)
       (invalid value "expected a string, boolean, or finite real attribute value"))))
 
@@ -256,7 +257,13 @@
   (sort (hash->list attrs) keyword<? #:key car))
 
 (define (property->string pair)
-  (string-append (keyword->string (car pair)) "="
+  (define name (keyword->string (car pair)))
+  (define encoded
+    (if (and (regexp-match? #px"^[A-Za-z_][A-Za-z_0-9]*$" name)
+             (not (member (string-downcase name)
+                          '("graph" "digraph" "subgraph" "node" "edge" "strict"))))
+        name (quote-id name)))
+  (string-append encoded "="
                  (quote-value (value->string (cdr pair)))))
 
 (define (properties->string pairs)
