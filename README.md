@@ -7,6 +7,81 @@ The composition is made possible through:
 * You can use graphviz diagrams as normal picts
 * You can use any Pict as node shape of graphviz diagrams
 
+## Installation
+
+Install Graphviz separately and verify that `dot -Tjson` is available.
+The historical JSON prerequisite is Graphviz 2.40.0; actual build
+capability matters. Then install the Racket collection:
+
+```sh
+raco pkg install graphviz
+```
+
+For development from this checkout:
+
+```sh
+raco pkg install --name graphviz --link "$PWD"
+raco test tests main.rkt lib
+```
+
+```racket
+#lang racket
+(require graphviz file/convertible)
+
+(define graph
+  (make-digraph '("start -> finish") #:rankdir "LR" #:nodesep 0.5))
+(define picture (digraph->pict graph))
+(call-with-output-file "graph.svg"
+  (lambda (out) (write-bytes (convert picture 'svg-bytes) out))
+  #:exists 'replace)
+```
+
+The public structs, constructors, pict re-exports, and port-returning
+`run-dot` API remain available. `#:ortho #t` remains a compatibility alias
+for `#:splines "ortho"`. Prefer `#:splines` in new code; conflicting
+settings produce an error.
+
+GUI applications can have a different PATH from the terminal. Configure
+an explicit executable instead of changing the application's environment:
+
+```racket
+(parameterize ([current-dot-executable "/opt/local/bin/dot"]
+               [current-dot-timeout 60])
+  (dot->pict "digraph { a -> b }"))
+```
+
+Use your installed path, for example a Homebrew, MacPorts, or Windows
+Graphviz executable. The default timeout is 30 seconds for the entire
+process operation; `#f` explicitly disables it. `run-dot` returns a fresh
+input port containing complete bytes, so PNG as well as textual formats
+work. The caller owns that port. `dot->pict` closes its internal port.
+
+For literal colons in names, use `(endpoint "a:b" #f #f)` in an `edge`.
+Existing strings such as `"a:n"` retain their port meaning. Node names
+are data; use an explicit node list for a name containing `->`.
+
+## Rendering scope
+
+| Feature | Support |
+| --- | --- |
+| Ellipses, polygons, polylines, cubic splines | Filled and unfilled, including multiple outlines |
+| Colors | RGB and RGBA transparency |
+| Fonts and labels | Requested faces, anchors, baselines, combined styles, head/tail labels |
+| Custom pict nodes | Supported, including nested subgraphs and transformed composition |
+| Gradients and external images | Explicit unsupported-operation errors |
+| Unknown drawing operations | Contextual errors instead of silent omission |
+
+Fonts are resolved by the local drawing backend. Exact pixels can differ
+between systems; use matching fonts for comparison with native Graphviz.
+Superscript/subscript and text decorations use the selected font metrics.
+The renderer retains Graphviz layout rather than applying label offsets.
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the test matrix, visual gallery,
+benchmarks, and release gates. The full API is documented in the Scribble
+manual.
+
+## Examples
+
 For example, in the following program note that the shapes for nodes "c" and "f" and also the node with fish shape
 are racket shapes. Rest of the nodes use a shape provided by graphviz.
 

@@ -67,10 +67,20 @@ Furthermore, a set of vertexes can be grouped in a subgraph, as show in @figure-
 
 @section[#:tag "api"]{API}
 
-@subsection{Defining Subgraphs}
-@defproc[(make-digraph [definitions list?] [#:ortho ortho boolean?]) digraph?]{
+@subsection{Defining Graphs}
+@defproc[(make-digraph [definitions list?]) digraph?]{
  Creates a digraph. "definitions" is a list of vertex, edge, or subgraph
- definitions.
+ definitions. Arbitrary keyword arguments become Graphviz graph attributes:
+ @racket[(make-digraph '("a -> b") #:rankdir "LR" #:nodesep 0.5)].
+ Values may be strings, booleans, or finite real numbers. Attribute names
+ remain extensible. Duplicate attributes in a definition retain the first
+ value, matching the historical parser. Malformed definitions raise an
+ argument error rather than silently losing graph content.
+
+ The compatibility keyword @racket[#:ortho] accepts a boolean: true selects
+ @tt{splines="ortho"}, false selects @tt{splines="true"}. A conflicting
+ explicit @racket[#:splines] value raises an error. New code should use
+ @racket[#:splines] directly.
 }
 
 @itemlist[
@@ -114,7 +124,7 @@ vertexes and edges are defined using strings.
 }
 
 
-@defproc[(make-vertex [label string?] [#:shape shape (or/c pict? string?)]) vertex?]{
+@defproc[(make-vertex [label string?] [#:shape shape (or/c pict? string?) "none"]) vertex?]{
 }
 
 @subsection{Conversion to Pict}
@@ -122,7 +132,8 @@ vertexes and edges are defined using strings.
  Converts the given digraph to a @racket[pict].
 }
 
-@defproc[(dot->pict [definition string?]) pict?]{
+@defproc[(dot->pict [definition string?]
+                     [#:node-picts node-picts hash? (hash)]) pict?]{
  Converts the given digraph definition in dot language to a @racket[pict].
  For example, following code produces @figure-ref["dot->pict-example"].
 
@@ -142,9 +153,80 @@ vertexes and edges are defined using strings.
  ]
 }
 
+@subsection{Construction, Serialization, and Execution}
+
+@defproc[(make-edge [from vertex?] [to vertex?]) edge?]{
+ Creates an edge between two existing vertices. Include the vertices and
+ edge in the definitions passed to @racket[make-digraph].
+}
+
+@defproc[(digraph->dot [graph digraph?]) string?]{
+ Serializes a graph deterministically. Names are quoted as data; a few
+ names that DOT cannot represent literally receive stable internal IDs.
+ Generated anonymous vertex names are unique within the Racket process;
+ separately constructed anonymous graphs need not have identical DOT.
+ DOT label escapes, such as @tt{\\n}, retain their Graphviz meaning.
+}
+
+@defproc[(digraph-node-picts [graph digraph?]) hash?]{
+ Returns the Graphviz node-ID to custom-pict mapping, including nested
+ subgraphs and any internally assigned IDs. Conflicting custom picts for
+ the same node are rejected.
+}
+
+@defproc[(digraph-ortho [graph digraph?]) boolean?]{
+ Compatibility accessor that reports whether the graph selects orthogonal
+ splines. Existing two-field graph structs remain unchanged. The older
+ boolean second field is also accepted when rendering or serializing.
+}
+
+@defproc[(run-dot [definition string?] [format string?]) input-port?]{
+ Runs Graphviz and returns a fresh input port containing its complete
+ output bytes. The caller closes this port. Formats include @tt{json},
+ @tt{svg}, @tt{png}, and Graphviz format/renderer variants. Failures include
+ executable and process context; an unsupported JSON output build is
+ identified explicitly. Warnings use Racket logging and never contaminate
+ the output. No partial output is returned after timeout or failure.
+}
+
+@defparam[current-dot-executable executable (or/c path-string? #f)
+          #:value #f]{
+ An explicit executable path, or @racket[#f] to find @tt{dot} on PATH at
+ call time. An invalid explicit path is an error. This supports GUI
+ environments whose PATH differs from a terminal, without mutating PATH.
+}
+
+@defparam[current-dot-timeout seconds (or/c positive? #f) #:value 30]{
+ Deadline in seconds covering input writes, process execution, and output
+ collection. Use @racket[#f] for explicitly unlimited execution. A timed
+ out or cancelled operation terminates the process and cleans up workers
+ and ports.
+}
+
+@defproc[(er-diagram [tables list?] [relations list?]) pict?]{
+ Each table is a list containing its name and a list of field strings.
+ Relations contain the source table, destination table, source cardinality,
+ and destination cardinality. Cardinalities are the symbols @racket['one]
+ and @racket['many]; legacy @racket['(quote one)] and
+ @racket['(quote many)] values remain accepted. Table names must be unique
+ and relation endpoints must exist. Record metacharacters are escaped.
+ @racketblock[
+ (er-diagram '(("a" ("id")) ("b" ("id")))
+             '(("a" "b" one many)))]
+}
+
+@defstruct[endpoint ([name string?] [port (or/c string? #f)]
+                     [compass (or/c string? #f)]) #:transparent]{
+ An explicit edge endpoint. @racket[(endpoint "a:b" #f #f)] refers to a
+ literal node name containing a colon. String endpoints retain the
+ historical colon-separated port syntax, such as @tt{Locked:n}.
+ Compass values are @tt{n}, @tt{ne}, @tt{e}, @tt{se}, @tt{s}, @tt{sw},
+ @tt{w}, @tt{nw}, @tt{c}, or @tt{_}. Use @racket[#f] for absent fields.
+}
+
 @subsection{Structs}
 
-@defstruct[digraph ([objects list?] [ortho boolean?]) #:omit-constructor]{
+@defstruct[digraph ([objects list?] [attrs hash?]) #:omit-constructor]{
 }
 
 @defstruct[vertex ([name string?]
@@ -199,7 +281,7 @@ vertexes and edges are defined using strings.
      (edge ("onRestart" "onStart"))
      (edge ("onStop" "killed"))
      (edge ("killed" "onCreate"))
-     (same-rank "killed" "Running" "onRestart")) #:ortho #t))
+     (same-rank "killed" "Running" "onRestart")) #:splines "ortho"))
 
 (scale (inset (digraph->pict d) 10) 0.8)
 }
@@ -227,7 +309,7 @@ vertexes and edges are defined using strings.
      (edge ("onRestart" "onStart"))
      (edge ("onStop" "killed"))
      (edge ("killed" "onCreate"))
-     (same-rank "killed" "Running" "onRestart")) #:ortho #t)]]
+     (same-rank "killed" "Running" "onRestart")) #:splines "ortho")]]
 
 @subsection{Turnstile State Machine}
 
@@ -251,3 +333,23 @@ vertexes and edges are defined using strings.
      (edge ("Unlocked:n" "Unlocked:n") #:label "Coin")
      (same-rank "Locked" "Unlocked")))
 ]
+
+@section{Installation and Rendering Limits}
+
+Install Graphviz separately, verify @tt{dot -Tjson}, then install the
+@tt{graphviz} Racket package. JSON support was introduced in Graphviz
+2.40.0; the executable's actual output capabilities are authoritative.
+The library does not start Graphviz merely because it is imported.
+
+The renderer supports filled and unfilled ellipses, polygons and cubic
+splines, polylines, RGB/RGBA colors, custom pict nodes, and all six drawing
+arrays for graph/node/edge labels and arrows. Font styles combine, and
+head/tail labels are retained. Fonts use local backend resolution; exact
+rasterization is platform dependent. Gradients and external image
+instructions currently produce contextual unsupported-feature errors.
+
+All exports from @racketmodname[pict] continue to be re-exported for
+compatibility. The default vertex shape remains @tt{none}. Existing raw
+struct layouts and constructors are preserved. Use an explicit one-item
+node list for a literal name containing @tt{->}; bare strings containing
+that sequence retain the convenience edge-chain interpretation.
