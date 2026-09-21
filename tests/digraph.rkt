@@ -14,7 +14,7 @@
   (define generated (for/list ([i (in-range 1000)]) (vertex-name (make-vertex "a"))))
   (check-equal? (length (remove-duplicates generated)) 1000)
   (when (find-executable-path "dot")
-    (for ([name '("hello world" "node" "a; b" "say \"hello\"" "魚" "back\\slash")])
+    (for ([name '("" "hello world" "node" "a; b" "say \"hello\"" "魚" "back\\slash")])
       (define graph (make-digraph (list (list name '#:label "label"))))
       (define json (read-json (run-dot (digraph->dot graph) "json")))
       (check-equal? (map (lambda (node) (hash-ref node 'name)) (hash-ref json 'objects))
@@ -29,6 +29,7 @@
       (check-equal? (length (hash-ref output 'objects)) 2)
       (check-true (hash-has-key? (digraph-node-picts graph)
                                 (hash-ref (first (hash-ref output 'objects)) 'name))))
+    (check-true (pict? (digraph->pict (make-digraph '((edge ("" "a")))))))
     (define graph
       (make-digraph (list '("a:b") '("c")
                           (edge (list (endpoint "a:b" #f #f) "c:n") (hash)))))

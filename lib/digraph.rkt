@@ -21,6 +21,9 @@
 (define default-shape "none")
 (define current-node-names (make-parameter (hash)))
 
+(define (endpoint-parts value)
+  (if (string=? value "") (list "") (string-split value ":" #:trim? #f)))
+
 (define (node-name value)
   (hash-ref (current-node-names) value value))
 
@@ -28,7 +31,7 @@
   (define names (mutable-set))
   (define (record-endpoint value)
     (set-add! names (if (endpoint? value) (endpoint-name value)
-                       (car (string-split value ":" #:trim? #f)))))
+                       (car (endpoint-parts value)))))
   (define (visit object)
     (match object
       [(vertex name _ _ _) (set-add! names name)]
@@ -241,7 +244,7 @@
       (if (endpoint-port value) (string-append ":" (quote-id (endpoint-port value))) "")
       (if (endpoint-compass value) (string-append ":" (endpoint-compass value)) ""))]
     [else
-     (define parts (string-split value ":" #:trim? #f))
+     (define parts (endpoint-parts value))
      (string-join (map quote-id (cons (node-name (car parts)) (cdr parts))) ":")]))
 
 (define (attribute-pairs attrs)
