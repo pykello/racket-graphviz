@@ -1,7 +1,6 @@
 #lang racket
 
-(require "dot.rkt")
-(require pict)
+(require "dot.rkt" pict)
 
 (provide (contract-out
           [make-vertex (->* (string?) (#:shape (or/c pict? string?)) vertex?)]
@@ -10,221 +9,267 @@
           [digraph->pict (-> digraph? pict?)]
           [digraph-node-picts (-> digraph? hash?)])
          make-digraph
-         (struct-out digraph)
-         (struct-out vertex)
-         (struct-out edge)
-         (struct-out subgraph))
+         (struct-out digraph) (struct-out vertex) (struct-out edge)
+         (struct-out subgraph) (struct-out endpoint))
 
 (struct digraph (objects attrs))
 (struct vertex (name label shape attrs))
 (struct edge (nodes attrs))
 (struct subgraph (label objects attrs))
+(struct endpoint (name port compass) #:transparent)
 
 (define default-shape "none")
+(define current-node-names (make-parameter (hash)))
+
+(define (node-name value)
+  (hash-ref (current-node-names) value value))
+
+(define (node-name-map graph)
+  (define names (mutable-set))
+  (define (record-endpoint value)
+    (set-add! names (if (endpoint? value) (endpoint-name value)
+                       (car (string-split value ":" #:trim? #f)))))
+  (define (visit object)
+    (match object
+      [(vertex name _ _ _) (set-add! names name)]
+      [(edge nodes _) (for-each record-endpoint nodes)]
+      [(subgraph _ objects _) (for-each visit objects)]
+      [(? list? nodes) (for-each record-endpoint nodes)]))
+  (for-each visit (digraph-objects graph))
+  (define result (make-hash))
+  (define counter 0)
+  (for ([name (in-list (sort (set->list names) string<?))]
+        #:when (regexp-match? #px"\\\\(?:[\"\n]|$)" name))
+    (define replacement
+      (let loop ()
+        (define candidate (format "__racket_graphviz_node_~a" counter))
+        (set! counter (add1 counter))
+        (if (set-member? names candidate) (loop) candidate)))
+    (set-add! names replacement)
+    (hash-set! result name replacement))
+  result)
 
 (define (make-vertex label #:shape [shape default-shape])
-  (define id (random 1 4294967087))
-  (define name (string-append "n_" (number->string id)))
-  (define attrs (make-immutable-hash))
-  (vertex name label shape attrs))
+  (vertex (symbol->string (gensym 'n_)) label shape (hash)))
 
 (define (make-edge n1 n2)
-  (define nodes (list (vertex-name n1) (vertex-name n2)))
-  (define attrs (make-immutable-hash))
-  (edge nodes attrs))
+  (edge (list (vertex-name n1) (vertex-name n2)) (hash)))
 
-(define make-digraph 
-  (make-keyword-procedure
-    (lambda (kws kw-args . d)
-      (define defs (car d))
-      (define attrs (make-immutable-hash (map cons kws kw-args)))
-      (digraph (map make-object defs) attrs))))
+(define (invalid value message)
+  (raise-arguments-error 'make-digraph message "definition" value))
 
-(define (make-object def)
-  (cond
-    [(or (vertex? def)
-         (edge? def)
-         (subgraph? def)) def]
-    [(string? def) (cond
-                     [(string-contains? def "->") (string->edge def)]
-                     [else                        (string->vertex def)])]
-    [(list? def) (cond
-                   [(empty? def) 0]
-                   [(eq? (first def) `subgraph)  (list->subgraph def)]
-                   [(list? (first def))          (list->edge def)]
-                   [(eq? (first def) `edge)      (list->edge (cdr def))]
-                   [(eq? (first def) `same-rank) (cdr def)]
-                   [else                         (list->vertex def)])]))
+(define (attribute-value? value)
+  (or (string? value) (boolean? value) (rational? value)))
 
-;; string->object functions
+(define (validate-attrs attrs)
+  (unless (hash? attrs) (invalid attrs "expected an attribute hash"))
+  (for ([(key value) (in-hash attrs)])
+    (unless (and (keyword? key)
+                 (regexp-match? #px"^[A-Za-z_][A-Za-z_0-9]*$" (keyword->string key)))
+      (invalid key "expected a Graphviz attribute keyword"))
+    (unless (attribute-value? value)
+      (invalid value "expected a string, boolean, or finite real attribute value"))))
 
-(define (string->vertex s)
-  (vertex s s default-shape (make-immutable-hash)))
+(define (valid-endpoint? value)
+  (or (string? value)
+      (and (endpoint? value) (string? (endpoint-name value))
+           (or (not (endpoint-port value)) (string? (endpoint-port value)))
+           (or (not (endpoint-compass value))
+               (member (endpoint-compass value)
+                       '("n" "ne" "e" "se" "s" "sw" "w" "nw" "c" "_"))))))
 
-(define (string->edge s)
-  (edge (string-split s #rx"[ ]*->[ ]*") (make-immutable-hash)))
-
-;; list->object functions
-
-(define (list->edge lst)
-  (define nodes (first lst))
-  (define-values (attrs rest) (list->attrs (cdr lst)))
-  (edge nodes attrs))
-
-(define (list->vertex lst)
-  (define-values (attrs rest) (list->attrs (cdr lst)))
-  (define name (first lst))
-  (define label (hash-ref attrs `#:label name))
-  (define shape (hash-ref attrs `#:shape default-shape))
-  (define other-attrs
-    (hash-remove-multi attrs `(#:label #:shape))) 
-  (vertex name label shape other-attrs))
-
-(define (list->subgraph def)
-  (define-values (attrs rest) (list->attrs (cdr def)))
-  (define name (first rest))
-  (define defs (second rest))
-  (subgraph name (map make-object defs) attrs))
-
-(define (list->attrs lst)
-  (define (aux lst attrs rest)
-    (cond
-      [(empty? lst)
-       (values (make-immutable-hash attrs) (reverse rest))]
-
-      [(keyword? (first lst))
-       (aux (cddr lst)
-            (cons (cons (first lst) (second lst)) attrs)
-            rest)]
-
-      [else
-       (aux (cdr lst)
-            attrs
-            (cons (first lst) rest))]))
-  (aux lst `() `()))
-
-;; digraph-node-picts
-
-(define (digraph-node-picts d)
-  (make-hash
-   (for/list ([v (digraph-vertices d)]
-              #:when (pict? (vertex-shape v)))
-     (cons (vertex-name v) (vertex-shape v)))))
-
-(define (digraph-vertices d)
-  (find-vertices (digraph-objects d)))
-
-(define (subgraph-vertices d)
-  (find-vertices (subgraph-objects d)))
-
-(define (find-vertices objs)
-  (define outer-vertices (filter vertex? objs))
-  (define subgraphs (filter subgraph? objs))
-  (define nested-vertices (map subgraph-vertices subgraphs))
-  (append outer-vertices (apply append nested-vertices)))
-
-;; digraph->pict
-
-(define (digraph->pict d)
-  (dot->pict (digraph->dot d)
-             #:node-picts (digraph-node-picts d)))
-
-;; digraph->dot
-
-(define (digraph->dot d)
-  (define defs (objects->dot (digraph-objects d)))
-  (define attrs (hash->list (digraph-attrs d)))
-  (string-append "digraph {\n"
-                 (string-join (map property->string attrs) "\n" #:after-last "\n")
-                 (indent 4 defs)
-                 "\n}"))
-
-(define (indent n s)
-  (define lines (string-split s "\n"))
-  (define line-prefix (repeat n " "))
-  (define indented-lines
-    (map (curry string-append line-prefix) lines))
-  (string-join indented-lines "\n"))
-
-(define (repeat n s)
-  (apply string-append
-         (for/list ([x (in-range n)])
-           s)))
-
-(define (objects->dot objs)
-  (string-join (map object->dot objs) "\n"))
-
-(define (object->dot obj)
-  (cond [(vertex? obj) (vertex->dot obj)]
-        [(edge? obj) (edge->dot obj)]
-        [(subgraph? obj) (subgraph->dot obj)]
-        [(list? obj) (rank->dot obj)]
-        [else ""]))
-
-(define (subgraph->dot d)
-  (define defs (objects->dot (subgraph-objects d)))
-  (define attrs (hash->list (subgraph-attrs d)))
-  (string-append "subgraph "
-                 "cluster_" (number->string (random 1 32000000))
-                 " {\n"
-                 "label=" (quote-string (subgraph-label d)) "\n"
-                 (string-join (map property->string attrs) "\n")
-                 "\n"
-                 (indent 4 defs)
-                 "\n}"))
-
-(define (vertex->dot v)
-  (match v
+(define (validate-object object)
+  (match object
     [(vertex name label shape attrs)
-     (define shape-str (if (pict? shape)
-                           default-shape
-                           shape))
-     (define basic-properties `((#:label . ,label)
-                                (#:shape . ,shape-str)))
-     (define size-properties
-       (cond
-         [(pict? shape) `((#:fixedsize . "true")
-                          (#:height . ,(number->string (/ (pict-height shape) 72.)))
-                          (#:width . ,(number->string (/ (pict-width shape) 72.))))]
-         [else `()]))
+     (unless (and (string? name) (string? label) (or (string? shape) (pict? shape)))
+       (invalid object "invalid vertex name, label, or shape"))
+     (validate-attrs attrs)]
+    [(edge nodes attrs)
+     (unless (and (list? nodes) (>= (length nodes) 2) (andmap valid-endpoint? nodes))
+       (invalid object "an edge needs at least two string or endpoint nodes"))
+     (validate-attrs attrs)]
+    [(subgraph label objects attrs)
+     (unless (and (string? label) (list? objects))
+       (invalid object "expected a subgraph label and object list"))
+     (for-each validate-object objects)
+     (validate-attrs attrs)]
+    [(? list? nodes)
+     (unless (and (pair? nodes) (andmap valid-endpoint? nodes))
+       (invalid nodes "same-rank needs at least one node"))]
+    [_ (invalid object "expected a vertex, edge, subgraph, or same-rank group")]))
 
-     (define other-properties (hash->list attrs))
+(define (validate-graph graph)
+  (unless (list? (digraph-objects graph))
+    (invalid graph "expected a graph object list"))
+  (validate-attrs (digraph-attrs graph))
+  (for-each validate-object (digraph-objects graph)))
 
-     (define properties (append basic-properties size-properties other-properties))
-     (string-append name (properties->string properties))]))
+(define make-digraph
+  (make-keyword-procedure
+   (lambda (keywords values . arguments)
+     (unless (and (= (length arguments) 1) (list? (car arguments)))
+       (raise-arguments-error 'make-digraph "expected exactly one definitions list"
+                              "arguments" arguments))
+     (define attrs (make-immutable-hash (map cons keywords values)))
+     (validate-attrs attrs)
+     (define graph (digraph (map make-object (car arguments)) attrs))
+     (validate-graph graph)
+     graph)))
 
-(define (edge->dot e)
-  (define attrs (edge-attrs e))
-  (string-append
-   (string-join (edge-nodes e) " -> ")
-   (properties->string (hash->list attrs))))
+(define (list->attrs arguments)
+  (let loop ([remaining arguments] [attrs (hash)] [rest '()])
+    (cond
+      [(null? remaining) (values attrs (reverse rest))]
+      [(keyword? (car remaining))
+       (unless (and (pair? (cdr remaining)) (not (keyword? (cadr remaining))))
+         (invalid remaining "attribute keyword needs a value"))
+       (loop (cddr remaining)
+             (if (hash-has-key? attrs (car remaining)) attrs
+                 (hash-set attrs (car remaining) (cadr remaining))) rest)]
+      [else (loop (cdr remaining) attrs (cons (car remaining) rest))])))
 
-(define (rank->dot e)
-  (string-append
-    "{\n"
-    "rank=same\n"
-    "ordering=out\n"
-    (string-join e "\n") "\n"
-    (string-join e " -> ") "[style=invis]"
-    "}"))
 
-(define (properties->string ps)
-  (string-join (map property->string ps) ","
-               #:before-first "["
-               #:after-last   "]"))
-
-(define (property->string p)
-  (define label (keyword->string (car p)))
-  (string-append label "=" (quote-string (value->string (cdr p)))))
-
-(define (value->string v)
+(define (make-object definition)
   (cond
-    [(eq? v #t) "true"]
-    [(eq? v #f) "false"]
-    [else v]))
+    [(or (vertex? definition) (edge? definition) (subgraph? definition)) definition]
+    [(string? definition)
+     (if (string-contains? definition "->")
+         (let ([nodes (map string-trim (string-split definition "->" #:trim? #f))])
+           (when (ormap (lambda (name) (string=? name "")) nodes)
+             (invalid definition "edge chain contains an empty node"))
+           (edge nodes (hash)))
+         (vertex definition definition default-shape (hash)))]
+    [(and (list? definition) (pair? definition))
+     (match definition
+       [(list* 'same-rank nodes) nodes]
+       [(list* 'subgraph rest)
+        (define-values (attrs positional) (list->attrs rest))
+        (match positional
+          [(list (? string? label) (? list? definitions))
+           (subgraph label (map make-object definitions) attrs)]
+          [_ (invalid definition "subgraph needs a label and definitions list")])]
+       [(list* 'edge rest) (make-list-edge rest definition)]
+       [(list* (? list?) _) (make-list-edge definition definition)]
+       [(list* (? string? name) rest)
+        (define-values (attrs positional) (list->attrs rest))
+        (unless (null? positional) (invalid definition "unexpected vertex arguments"))
+        (vertex name (hash-ref attrs '#:label name)
+                (hash-ref attrs '#:shape default-shape)
+                (hash-remove (hash-remove attrs '#:label) '#:shape))]
+       [_ (invalid definition "unrecognized graph definition")])]
+    [else (invalid definition "unrecognized graph definition")]))
 
-(define (quote-string s)
-  (string-append "\"" (string-replace s "\"" "\\\"") "\""))
+(define (make-list-edge rest definition)
+  (unless (and (pair? rest) (list? (car rest)))
+    (invalid definition "edge needs a node list"))
+  (define-values (attrs positional) (list->attrs (cdr rest)))
+  (unless (null? positional) (invalid definition "unexpected edge arguments"))
+  (edge (car rest) attrs))
 
-(define (hash-remove-multi h keys)
-  (foldr (λ (v l) (hash-remove l v)) h keys))
+(define (vertices objects)
+  (append-map (lambda (object)
+                (cond [(vertex? object) (list object)]
+                      [(subgraph? object) (vertices (subgraph-objects object))]
+                      [else '()])) objects))
+
+(define (digraph-node-picts graph)
+  (validate-graph graph)
+  (define result (make-hash))
+  (define names (node-name-map graph))
+  (for ([node (in-list (vertices (digraph-objects graph)))])
+    (when (pict? (vertex-shape node))
+      (define old (hash-ref result (hash-ref names (vertex-name node) (vertex-name node)) #f))
+      (when (and old (not (eq? old (vertex-shape node))))
+        (invalid (vertex-name node) "conflicting custom picts for one node"))
+      (hash-set! result (hash-ref names (vertex-name node) (vertex-name node))
+                 (vertex-shape node))))
+  result)
+
+(define (digraph->pict graph)
+  (dot->pict (digraph->dot graph) #:node-picts (digraph-node-picts graph)))
+
+(define (value->string value)
+  (cond [(eq? value #t) "true"] [(eq? value #f) "false"]
+        [(rational? value) (number->string (if (integer? value) value (exact->inexact value)))]
+        [else value]))
+
+(define (quote-id text)
+  (string-append "\""
+                 (string-replace text "\"" "\\\"")
+                 "\""))
+
+(define (quote-value text)
+  (define output (open-output-string))
+  (write-char #\" output)
+  (let loop ([characters (string->list text)])
+    (match characters
+      ['() (void)]
+      [(list #\\) (display "\\\\" output)]
+      [(list* #\\ next rest)
+       (write-char #\\ output)
+       (write-char next output)
+       (loop rest)]
+      [(cons #\" rest) (display "\\\"" output) (loop rest)]
+      [(cons char rest) (write-char char output) (loop rest)]))
+  (write-char #\" output)
+  (get-output-string output))
+
+(define (endpoint->dot value)
+  (cond
+    [(endpoint? value)
+     (string-append
+      (quote-id (node-name (endpoint-name value)))
+      (if (endpoint-port value) (string-append ":" (quote-id (endpoint-port value))) "")
+      (if (endpoint-compass value) (string-append ":" (endpoint-compass value)) ""))]
+    [else
+     (define parts (string-split value ":" #:trim? #f))
+     (string-join (map quote-id (cons (node-name (car parts)) (cdr parts))) ":")]))
+
+(define (attribute-pairs attrs)
+  (sort (hash->list attrs) keyword<? #:key car))
+
+(define (property->string pair)
+  (string-append (keyword->string (car pair)) "="
+                 (quote-value (value->string (cdr pair)))))
+
+(define (properties->string pairs)
+  (string-append "[" (string-join (map property->string pairs) ",") "]"))
+
+(define (digraph->dot graph)
+  (validate-graph graph)
+  (define cluster-index 0)
+  (define (objects->dot objects)
+    (string-join (map object->dot objects) "\n"))
+  (define (object->dot object)
+    (match object
+      [(vertex name label shape attrs)
+       (define custom? (pict? shape))
+       (define properties
+         (append (list (cons '#:label label)
+                       (cons '#:shape (if custom? default-shape shape)))
+                 (if custom?
+                     (list (cons '#:fixedsize #t)
+                           (cons '#:width (/ (pict-width shape) 72.0))
+                           (cons '#:height (/ (pict-height shape) 72.0))) '())
+                 (attribute-pairs attrs)))
+       (string-append (quote-id (node-name name)) (properties->string properties))]
+      [(edge nodes attrs)
+       (string-append (string-join (map endpoint->dot nodes) " -> ")
+                      (properties->string (attribute-pairs attrs)))]
+      [(subgraph label objects attrs)
+       (define id cluster-index)
+       (set! cluster-index (add1 cluster-index))
+       (format "subgraph cluster_~a {\nlabel=~a\n~a\n~a\n}"
+               id (quote-value label)
+               (string-join (map property->string (attribute-pairs attrs)) "\n")
+               (objects->dot objects))]
+      [(? list? nodes)
+       (define names (map endpoint->dot nodes))
+       (string-append "{rank=same; ordering=out;\n" (string-join names ";\n")
+                      (if (> (length names) 1)
+                          (string-append ";\n" (string-join names " -> ") "[style=invis]") "")
+                      "\n}")]))
+  (parameterize ([current-node-names (node-name-map graph)])
+    (string-append "digraph {\n"
+                 (string-join (map property->string (attribute-pairs (digraph-attrs graph))) "\n")
+                 "\n" (objects->dot (digraph-objects graph)) "\n}")))
