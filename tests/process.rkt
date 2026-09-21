@@ -1,0 +1,27 @@
+#lang racket
+(require rackunit racket/runtime-path "../lib/private/process.rkt")
+(define-runtime-path fake "helpers/fake-dot.rkt")
+(define racket-bin (find-executable-path "racket"))
+(define (fake-run mode [input ""] [timeout 5])
+  (execute racket-bin (list (path->string fake) mode) input timeout))
+(module+ test
+  (check-equal? (fake-run "binary") #"\0\377\200PNG")
+  (check-equal? (bytes-length (fake-run "flood" (make-string 200000 #\x))) 200000)
+  (check-equal? (bytes->string/utf-8 (fake-run "unicode")) "λ魚")
+  (check-exn #rx"status 7.*failure" (lambda () (fake-run "error")))
+  (check-exn #rx"timed out" (lambda () (fake-run "sleep" "" 0.2)))
+  (check-exn #rx"timed out"
+             (lambda () (fake-run "sleep" (make-string 1000000 #\x) 0.2)))
+  (check-exn #rx"executable not found"
+             (lambda ()
+               (parameterize ([current-dot-executable "/missing/graphviz/dot"])
+                 (run-dot "digraph {}" "json"))))
+  (check-exn exn:fail:contract? (lambda () (run-dot "digraph {}" "png; echo bad")))
+  (check-exn exn:fail:contract? (lambda () (current-dot-timeout 0)))
+  (when (find-executable-path "dot")
+    (parameterize ([current-dot-executable (find-executable-path "dot")])
+      (check-equal? (read-bytes 8 (run-dot "digraph {a->b}" "png"))
+                    #"\211PNG\r\n\32\n")
+      (check-true (string-contains? (port->string (run-dot "digraph {a->b}" "svg"))
+                                    "<svg"))
+      (check-exn #rx"Graphviz exited" (lambda () (run-dot "invalid {" "json"))))))

@@ -1,6 +1,7 @@
 #lang racket
 
-(require pict
+(require "private/process.rkt"
+         pict
          json
          racket/draw
          (only-in metapict
@@ -8,7 +9,8 @@
                   pt
                   bez->dc-path))
 
-(provide (contract-out
+(provide current-dot-executable current-dot-timeout
+         (contract-out
           [run-dot (-> string? string? port?)]
           [dot->pict (->* (string?) (#:node-picts hash?) pict?)]))
 
@@ -17,46 +19,11 @@
 ;;
 (define (dot->pict str #:node-picts [node-picts (make-immutable-hash)])
   (define dot-output (run-dot str "json"))
-  (define xdot-json (read-json dot-output))
+  (define xdot-json
+    (dynamic-wind void
+                  (lambda () (read-json dot-output))
+                  (lambda () (close-input-port dot-output))))
   (xdot-json->pict xdot-json node-picts))
-
-;;
-;; runs "dot" and returns the stdout port
-;;
-(define (run-dot str format)
-  (define cmd (string-append "dot -y -T" format))
-  (match (process cmd)
-    [(list stdout stdin pid stderr ctl)
-     (write-string str stdin)
-     (newline stdin)
-     (close-output-port stdin)
-     (define output (read-process-output stdout ctl))
-     (cond [(eq? (ctl 'status) 'done-error) (error (port->string stderr))]
-           [else (open-input-string output)])]))
-
-
-;;
-;; Reads the process output until eof, or timeout, or error
-;;
-(define (read-process-output port ctl [timeout 5000])
-  (define expire (+ (current-inexact-milliseconds) timeout))
-  (define (test-func)
-    (or (equal? (ctl 'status) 'done-error)
-        (> (current-inexact-milliseconds) expire)))
-  (read-until port test-func))
-
-
-(define (read-until port test-func)
-  (define (read-until-rec)
-    (cond
-      [(test-func) '()]
-      [else (define bs (make-bytes 4096))
-            (define result (read-bytes-avail!* bs port))
-            (if (eof-object? result)
-                '()
-                (cons (bytes->string/utf-8 (subbytes bs 0 result))
-                      (read-until-rec)))]))
-  (apply string-append (read-until-rec)))
 
 ;;
 ;; converts output of dot in json format to a pict
