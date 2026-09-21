@@ -2,8 +2,7 @@
 (define collection "graphviz")
 (define deps '("base"
                "pict-lib"
-               "draw-lib"
-               "metapict"))
+               "draw-lib"))
 (define build-deps '("scribble-lib"
                      "pict-doc"
                      "racket-doc"
